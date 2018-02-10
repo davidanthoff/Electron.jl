@@ -42,4 +42,8 @@ build_script:
       Pkg.clone(pwd(), \"Electron\"); Pkg.build(\"Electron\")"
 
 test_script:
-  - C:\projects\julia\bin\julia -e "Pkg.test(\"Electron\")"
+  - C:\projects\julia\bin\julia -e "Pkg.test(\"Electron\", coverage=true)"
+
+after_test:
+  - C:\projects\julia\bin\julia -e "cd(Pkg.dir(\"Electron\")); Pkg.add(\"Coverage\"); using Coverage; Codecov.submit(Codecov.process_folder())"
+
