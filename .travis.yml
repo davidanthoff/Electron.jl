@@ -11,6 +11,12 @@ notifications:
 git:
   depth: 99999999
 
+branches:
+  only:
+  - master
+  - /release-.*/
+  - /v(\d+)\.(\d+)\.(\d+)/
+
 matrix:
   allow_failures:
   - julia: nightly
