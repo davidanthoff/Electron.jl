@@ -53,11 +53,20 @@ function Application()
     pipe_name = "juliaelectron-$process_id-$id"
     named_pipe_name = generate_pipe_name(pipe_name)
 
+    println(named_pipe_name)
+
+    println("STEP 1")
     server = listen(named_pipe_name)
+
+    println("STEP 2")
 
     proc = spawn(`$electron_path $mainjs $pipe_name`)
 
+    println("STEP 3")
+
     sock = accept(server)
+
+    println("STEP 4")
 
     return Application(id, sock, proc)
 end
@@ -67,9 +76,13 @@ function Base.close(app::Application)
 end
 
 function Base.run(app::Application, code::AbstractString)
+    println("STEP A")
     println(app.connection, JSON.json(Dict("target"=>"app", "code"=>code)))
+    println("STEP B")
     retval_json = readline(app.connection)
+    println("STEP C")
     retval = JSON.parse(retval_json)
+    println("STEP D")
     return retval["data"]
 end
 
