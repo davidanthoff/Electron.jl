@@ -44,6 +44,13 @@ function get_electron_binary_cmd()
     end
 end
 
+"""
+    function Application()
+
+Start a new Electron application. This will start a new process
+for that Electron app and return an instance of `Application` that
+can be used in the construction of Electron windows.
+"""
 function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
@@ -62,10 +69,22 @@ function Application()
     return Application(id, sock, proc)
 end
 
+"""
+    close(app::Application)
+
+Terminates the Electron application referenced by `app`.
+"""
 function Base.close(app::Application)
     close(app.connection)
 end
 
+"""
+    run(app::Application, code::AbstractString)
+
+Run the JavaScript code that is passed in `code` in the main
+application thread of the `app` Electron process. Returns the
+value that the JavaScript expression returns.
+"""
 function Base.run(app::Application, code::AbstractString)
     println(app.connection, JSON.json(Dict("target"=>"app", "code"=>code)))
     retval_json = readline(app.connection)
@@ -73,6 +92,13 @@ function Base.run(app::Application, code::AbstractString)
     return retval["data"]
 end
 
+"""
+    run(win::Window, code::AbstractString)
+
+Run the JavaScript code that is passed in `code` in the render
+thread of the `win` Electron windows. Returns the value that
+the JavaScript expression returns.
+"""
 function Base.run(win::Window, code::AbstractString)
     message = Dict("target"=>"window", "winid" => win.id, "code" => code)
     println(win.app.connection, JSON.json(message))
@@ -81,6 +107,12 @@ function Base.run(win::Window, code::AbstractString)
     return retval["data"]
 end
 
+"""
+    function Window(app::Application, uri::URI)
+
+Open a new Window in the application `app`. Show the content
+that `uri` points to in that new window.
+"""
 function Window(app::Application, uri::URI)
     json_options = JSON.json(Dict("url"=>string(uri)))
     code = "createWindow($json_options)"
@@ -88,6 +120,13 @@ function Window(app::Application, uri::URI)
     return Window(app, ret_val)
 end
 
+"""
+    function Window(uri::URI)
+
+Open a new Window in the default Electron application. If no
+default application is running, first start one. Show the content
+that `uri` points to in that new window.
+"""
 function Window(uri::URI)
     if isnull(_global_application[])
         _global_application[] = Nullable(Application())
