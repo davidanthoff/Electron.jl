@@ -1,9 +1,10 @@
 using Electron
+using URIParser
 using Base.Test
 
 @testset "Electron" begin
 
-w = Window("file://test.html")
+w = Window(URI("file://test.html"))
 
 @test isa(w, Window)
 

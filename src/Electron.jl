@@ -1,7 +1,7 @@
 __precompile__()
 module Electron
 
-using JSON
+using JSON, URIParser
 
 export Application, Window
 
@@ -81,19 +81,19 @@ function Base.run(win::Window, code::AbstractString)
     return retval["data"]
 end
 
-function Window(app::Application, url::AbstractString)
-    json_options = JSON.json(Dict("url"=>url))
+function Window(app::Application, uri::URI)
+    json_options = JSON.json(Dict("url"=>string(uri)))
     code = "createWindow($json_options)"
     ret_val = run(app, code)
     return Window(app, ret_val)
 end
 
-function Window(url::AbstractString)
+function Window(uri::URI)
     if isnull(_global_application[])
         _global_application[] = Nullable(Application())
     end
 
-    return Window(get(_global_application[]), url)
+    return Window(get(_global_application[]), uri)
 end
 
 end
