@@ -1,7 +1,8 @@
 const {app, BrowserWindow} = require('electron')
 const path = require('path')
 const url = require('url')
-const net = require("net")
+const net = require('net')
+const os = require('os')
 
 // Window creation
 var windows = {}
