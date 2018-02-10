@@ -34,7 +34,4 @@ before_script:
 script:
   - $TESTCMD -e 'Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron"; coverage=true)'
 after_success:
-  # push coverage results to Coveralls
-  - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Coveralls.submit(Coveralls.process_folder())'
-  # push coverage results to Codecov
   - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
