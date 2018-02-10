@@ -1,5 +1,10 @@
 using Electron
 using Base.Test
 
-# write your own tests here
-@test 1 == 2
+@testset "Electron" begin
+
+w = Window("file://test.html")
+
+@test isa(w, Window)
+
+end
