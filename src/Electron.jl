@@ -67,9 +67,13 @@ function Base.close(app::Application)
 end
 
 function Base.run(app::Application, code::AbstractString)
+    println("STEP A")
     println(app.connection, JSON.json(Dict("target"=>"app", "code"=>code)))
+    println("STEP B")
     retval_json = readline(app.connection)
+    println("STEP C")
     retval = JSON.parse(retval_json)
+    println("STEP D")
     return retval["data"]
 end
 
