@@ -7,17 +7,17 @@
 
 ## Overview
 
-Electron.jl wraps the cross-platform desktop application framework [Electron](https://electronjs.org/). You can use it to build GUI applications in julia.
+[Electron.jl](https://github.com/davidanthoff/Electron.jl) wraps the cross-platform desktop application framework [Electron](https://electronjs.org/). You can use it to build GUI applications in julia.
 
 ## Alternatives
 
-[Blink.jl](https://github.com/JunoLab/Blink.jl) provides similar functionality. The main difference between the two packages is that Electron.jl opts for a more minimalistic feature set than Blink.jl. Here are some key differences between the two packages:
-* Electron.jl does not have any web server functionality.
-* Electron.jl has no functionality to translate julia code to JavaScript.
-* Electron.jl uses named pipes for the communication between julia and the electron process (no more firewall warnings!).
-* Electron.jl doesn't integrate with the Juno stack of packages, Blink.jl does in some way (that I don't understand).
-* Electron.jl has a high test coverage.
-* Electron.jl always installs a private copy of Electron during the build phase.
+[Blink.jl](https://github.com/JunoLab/Blink.jl) provides similar functionality. The main difference between the two packages is that [Electron.jl](https://github.com/davidanthoff/Electron.jl) opts for a more minimalistic feature set than [Blink.jl](https://github.com/JunoLab/Blink.jl). Here are some key differences between the two packages:
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) does not have any web server functionality.
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) has no functionality to translate julia code to JavaScript.
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) uses named pipes for the communication between julia and the electron process (no more firewall warnings!).
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) doesn't integrate with the Juno stack of packages, [Blink.jl](https://github.com/JunoLab/Blink.jl) does in some way (that I don't understand).
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) has a high test coverage.
+* [Electron.jl](https://github.com/davidanthoff/Electron.jl) always installs a private copy of Electron during the build phase.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Pkg.add("Electron")
 
 ## Getting started
 
-Electron.jl introduces two fundamental types: ``Application`` represents a running electron application, ``Window`` is a visible UI window. A julia process can have arbitrarily many applications running at the same time, each represented by its own ``Application`` instance. If you don't want to deal with ``Application``s you can also just ignore them, in that case Electron.jl will create a default application for you automatically.
+[Electron.jl](https://github.com/davidanthoff/Electron.jl) introduces two fundamental types: ``Application`` represents a running electron application, ``Window`` is a visible UI window. A julia process can have arbitrarily many applications running at the same time, each represented by its own ``Application`` instance. If you don't want to deal with ``Application``s you can also just ignore them, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) will create a default application for you automatically.
 
 To create a new application, simply call the corresponding constructor:
 
@@ -53,7 +53,7 @@ win = Window(app, URI("file://main.html))
 
 Note that you need to pass a URI that points to an HTML file to the ``Window`` constructor. This HTML file will be displayed in the new window.
 
-You can also call the ``Window`` constructor without passing an ``Application``, in that case Electron.jl creates a default application for you:
+You can also call the ``Window`` constructor without passing an ``Application``, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) creates a default application for you:
 
 ````julia
 using Electron, URIParser
