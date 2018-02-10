@@ -2,9 +2,9 @@ import BinDeps
 
 const version = "1.8.2"
 
-# if is_apple()
-#     const _icons = normpath(joinpath(@__FILE__, "../../../res/julia-icns.icns"))
-# end
+if is_apple()
+    const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
+end
 
 download(x) = run(BinDeps.download_cmd(x, basename(x)))
 
