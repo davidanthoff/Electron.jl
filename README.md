@@ -11,7 +11,7 @@
 
 ## Alternatives
 
-[Blink.jl](https://github.com/JunoLab/Blink.jl) provides similar functionality. The main difference between the two packages is that [Electron.jl](https://github.com/davidanthoff/Electron.jl) opts for a more minimalistic feature set than [Blink.jl](https://github.com/JunoLab/Blink.jl). Here are some key differences between the two packages:
+[Blink.jl](https://github.com/JunoLab/Blink.jl) provides similar functionality (and was a major inspiration for this package!). The main difference between the two packages is that [Electron.jl](https://github.com/davidanthoff/Electron.jl) opts for a more minimalistic feature set than [Blink.jl](https://github.com/JunoLab/Blink.jl). Here are some key differences between the two packages:
 * [Electron.jl](https://github.com/davidanthoff/Electron.jl) does not have any web server functionality.
 * [Electron.jl](https://github.com/davidanthoff/Electron.jl) has no functionality to translate julia code to JavaScript.
 * [Electron.jl](https://github.com/davidanthoff/Electron.jl) uses named pipes for the communication between julia and the electron process (no more firewall warnings!).
