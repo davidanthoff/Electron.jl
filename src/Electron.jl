@@ -21,7 +21,7 @@ end
 
 mutable struct Window
     app::Application
-    id::Int
+    id::Int64
     exists::Bool
 
     function Window(app::Application, id::Int)
