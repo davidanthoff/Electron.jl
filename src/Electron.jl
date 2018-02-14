@@ -24,7 +24,7 @@ mutable struct Window
     id::Int64
     exists::Bool
 
-    function Window(app::Application, id::Int)
+    function Window(app::Application, id::Int64)
         new_window = new(app, id, true)
         push!(_global_windows, new_window)
         return new_window
