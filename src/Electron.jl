@@ -3,25 +3,49 @@ module Electron
 
 using JSON, URIParser
 
-export Application, Window
+export Application, Window, URI, windows, applications
 
-struct Application
+mutable struct Application
     id::UInt
     connection
     proc
+    sysnotify_connection
+    exists::Bool
+
+    function Application(id::Int, connection, proc, sysnotify_connection)
+        new_app = new(id, connection, proc, sysnotify_connection, true)
+        push!(_global_applications, new_app)
+        return new_app
+    end
 end
 
-struct Window
+mutable struct Window
     app::Application
-    id::Int
+    id::Int64
+    exists::Bool
+
+    function Window(app::Application, id::Int64)
+        new_window = new(app, id, true)
+        push!(_global_windows, new_window)
+        return new_window
+    end
 end
 
-const _global_application = Ref{Nullable{Application}}(Nullable{Application}())
+const _global_applications = Vector{Application}(0)
 const _global_application_next_id = Ref{Int}(1)
 
+const _global_windows = Vector{Window}()
+
 function __init__()
-    _global_application[] = Nullable{Application}()
     _global_application_next_id[] = 1
+end
+
+function applications()
+    return _global_applications
+end
+
+function windows()
+    return _global_windows
 end
 
 function generate_pipe_name(name)
@@ -57,16 +81,47 @@ function Application()
     id = _global_application_next_id[]
     _global_application_next_id[] = id + 1
     process_id = getpid()
-    pipe_name = "juliaelectron-$process_id-$id"
-    named_pipe_name = generate_pipe_name(pipe_name)
 
-    server = listen(named_pipe_name)
+    main_pipe_name = "juliaelectron-$process_id-$id"
+    main_pipe_name_full = generate_pipe_name(main_pipe_name)
+    server = listen(main_pipe_name_full)
 
-    proc = spawn(`$electron_path $mainjs $pipe_name`)
+    sysnotify_pipe_name = "juliaelectron-sysnotify-$process_id-$id"
+    sysnotify_pipe_name_full = generate_pipe_name(sysnotify_pipe_name)
+    sysnotify_server = listen(sysnotify_pipe_name_full)
+
+    proc = spawn(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`)
 
     sock = accept(server)
 
-    return Application(id, sock, proc)
+    sysnotify_sock = accept(sysnotify_server)
+
+    sysnotify_task = @schedule begin
+        while true
+            line_json = readline(sysnotify_sock)
+            cmd_parsed = JSON.parse(line_json)
+            if cmd_parsed["cmd"] == "windowclosed"
+                win_index = findfirst(i->i.app.id==id && i.id==cmd_parsed["winid"], _global_windows)
+                _global_windows[win_index].exists = false
+                deleteat!(_global_windows, win_index)
+            elseif cmd_parsed["cmd"] == "appclosing"
+                break
+            end
+        end
+        # Cleanup all the windows that are associated with this application
+        win_indices = sort(find(i->i.app.id==id, _global_windows), rev=true)
+        for win_index in win_indices
+            _global_windows[win_index].exists = false
+            deleteat!(_global_windows, win_index)
+        end
+        # Cleanup the application instance
+        app_index = findfirst(i->i.id == id, _global_applications)
+        _global_applications[app_index].exists = false
+        close(_global_applications[app_index].sysnotify_connection)
+        deleteat!(_global_applications, app_index)
+    end
+
+    return Application(id, sock, proc, sysnotify_sock)
 end
 
 """
@@ -75,6 +130,7 @@ end
 Terminates the Electron application referenced by `app`.
 """
 function Base.close(app::Application)
+    app.exists || error("Cannot close this application, the application does no longer exist.")
     close(app.connection)
 end
 
@@ -86,7 +142,8 @@ application thread of the `app` Electron process. Returns the
 value that the JavaScript expression returns.
 """
 function Base.run(app::Application, code::AbstractString)
-    println(app.connection, JSON.json(Dict("target"=>"app", "code"=>code)))
+    app.exists || error("Cannot run code in this application, the application does no longer exist.")
+    println(app.connection, JSON.json(Dict("cmd"=>"runcode", "target"=>"app", "code"=>code)))
     retval_json = readline(app.connection)
     retval = JSON.parse(retval_json)
     return retval["data"]
@@ -100,7 +157,8 @@ thread of the `win` Electron windows. Returns the value that
 the JavaScript expression returns.
 """
 function Base.run(win::Window, code::AbstractString)
-    message = Dict("target"=>"window", "winid" => win.id, "code" => code)
+    win.exists || error("Cannot run code in this window, the window does no longer exist.")
+    message = Dict("cmd"=>"runcode", "target"=>"window", "winid" => win.id, "code" => code)
     println(win.app.connection, JSON.json(message))
     retval_json = readline(win.app.connection)
     retval = JSON.parse(retval_json)
@@ -114,9 +172,11 @@ Open a new Window in the application `app`. Show the content
 that `uri` points to in that new window.
 """
 function Window(app::Application, uri::URI)
-    json_options = JSON.json(Dict("url"=>string(uri)))
-    code = "createWindow($json_options)"
-    ret_val = run(app, code)
+    message = Dict("cmd" => "newwindow", "url" => string(uri))
+    println(app.connection, JSON.json(message))
+    retval_json = readline(app.connection)
+    retval = JSON.parse(retval_json)
+    ret_val = retval["data"]
     return Window(app, ret_val)
 end
 
@@ -128,11 +188,25 @@ default application is running, first start one. Show the content
 that `uri` points to in that new window.
 """
 function Window(uri::URI)
-    if isnull(_global_application[])
-        _global_application[] = Nullable(Application())
+    if length(_global_applications)==0
+        Application()
     end
 
-    return Window(get(_global_application[]), uri)
+    return Window(_global_applications[1], uri)
+end
+
+"""
+    close(win::Window)
+
+Close the windows referenced by `win`.
+"""
+function Base.close(win::Window)
+    win.exists || error("Cannot close this window, the window does no longer exist.")
+    message = Dict("cmd"=>"closewindow", "winid" => win.id)
+    println(win.app.connection, JSON.json(message))
+    retval_json = readline(win.app.connection)
+    retval = JSON.parse(retval_json)
+    return nothing
 end
 
 end
