@@ -35,6 +35,10 @@ w4 = Window(URI("file://test.html"), options=Dict("title" => "Window title"))
 
 w5 = Window("<body></body>", options=Dict("title" => "Window title"))
 
+a2 = applications()[1]
+
+w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
+
 close(w3)
 
 end
