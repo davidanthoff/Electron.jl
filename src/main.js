@@ -61,7 +61,7 @@ function process_command(connection, cmd) {
         connection.write(JSON.stringify({})+'\n')
     }
     else if (cmd.cmd == 'newwindow') {
-        createWindow(connection, {url: cmd.url})
+        createWindow(connection, cmd.options)
     }
 }
 

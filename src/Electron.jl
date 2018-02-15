@@ -166,18 +166,53 @@ function Base.run(win::Window, code::AbstractString)
 end
 
 """
-    function Window(app::Application, uri::URI)
+    function Window(app::Application, options::Dict)
 
-Open a new Window in the application `app`. Show the content
-that `uri` points to in that new window.
+Open a new Window in the application `app`. Pass the content
+of `options` to the Electron `BrowserWindow` constructor.
 """
-function Window(app::Application, uri::URI)
-    message = Dict("cmd" => "newwindow", "url" => string(uri))
+function Window(app::Application, options::Dict)
+    message = Dict("cmd" => "newwindow", "options" => options)
     println(app.connection, JSON.json(message))
     retval_json = readline(app.connection)
     retval = JSON.parse(retval_json)
     ret_val = retval["data"]
     return Window(app, ret_val)
+end
+
+"""
+    function Window(options::Dict)
+
+Open a new Window in the default Electron application. If no
+default application is running, first start one. Pass the content
+of `options` to the Electron `BrowserWindow` constructor.
+"""
+function Window(options::Dict)
+    if length(_global_applications)==0
+        Application()
+    end
+
+    return Window(_global_applications[1], options)
+end
+
+"""
+    function Window(app::Application, uri::URI)
+
+Open a new Window in the application `app`. Show the content
+that `uri` points to in that new window.
+"""
+function Window(app::Application, uri::URI; options::Union{Void,Dict}=nothing)
+    internal_options = Dict{String,Any}()
+
+    if options!==nothing
+        for (k,v) in options
+            internal_options[k] = deepcopy(v)
+        end
+    end
+
+    internal_options["url"] = string(uri)
+
+    return Window(app, internal_options)
 end
 
 """
@@ -187,12 +222,20 @@ Open a new Window in the default Electron application. If no
 default application is running, first start one. Show the content
 that `uri` points to in that new window.
 """
-function Window(uri::URI)
+function Window(uri::URI; options::Union{Void,Dict}=nothing)
     if length(_global_applications)==0
         Application()
     end
 
-    return Window(_global_applications[1], uri)
+    return Window(_global_applications[1], uri, options=options)
+end
+
+function Window(app::Application, content::AbstractString; options::Union{Void,Dict}=nothing)
+    return Window(app, URI("data:text/html;charset=utf-8," * escape(content)), options=options)
+end
+
+function Window(content::AbstractString; options::Union{Void,Dict}=nothing)
+    return Window(URI("data:text/html;charset=utf-8," * escape(content)), options=options)
 end
 
 """
