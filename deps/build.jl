@@ -27,7 +27,7 @@ cd(@__DIR__) do
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-win32-$arch.zip"
         download("https://github.com/electron/electron/releases/download/v$version/$file")
-        run(`7z x $file -oelectron`)
+        run(`7z x $file -oelectron -aoa`)
         rm(file)
     end
 
