@@ -48,7 +48,7 @@ using Electron, URIParser
 
 app = Application()
 
-win = Window(app, URI("file://main.html))
+win = Window(app, URI("file://main.html"))
 ````
 
 Note that you need to pass a URI that points to an HTML file to the ``Window`` constructor. This HTML file will be displayed in the new window.
@@ -58,7 +58,7 @@ You can also call the ``Window`` constructor without passing an ``Application``,
 ````julia
 using Electron, URIParser
 
-win = Window(URI("file://main.html))
+win = Window(URI("file://main.html"))
 ````
 
 Finally, you can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
@@ -78,7 +78,7 @@ You can also run JavaScript in the render thread of any open window by passing t
 ````julia
 using Electron, URIParser
 
-win = Window(URI("file://main.html))
+win = Window(URI("file://main.html"))
 
 result = run(win, "Math.Log(10)")
 ````
