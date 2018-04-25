@@ -143,7 +143,9 @@ value that the JavaScript expression returns.
 """
 function Base.run(app::Application, code::AbstractString)
     app.exists || error("Cannot run code in this application, the application does no longer exist.")
-    println(app.connection, JSON.json(Dict("cmd"=>"runcode", "target"=>"app", "code"=>code)))
+    print(app.connection, """{"cmd":"runcode","target":"app","code":""")
+    JSON.print(app.connection, code)
+    println(app.connection, "}")
     retval_json = readline(app.connection)
     retval = JSON.parse(retval_json)
     return retval["data"]
@@ -158,8 +160,9 @@ the JavaScript expression returns.
 """
 function Base.run(win::Window, code::AbstractString)
     win.exists || error("Cannot run code in this window, the window does no longer exist.")
-    message = Dict("cmd"=>"runcode", "target"=>"window", "winid" => win.id, "code" => code)
-    println(win.app.connection, JSON.json(message))
+    print(win.app.connection,"""{"cmd":"runcode","target":"window","winid":$(win.id),"code":""")
+    JSON.print(win.app.connection, code)
+    println(win.app.connection, "}")
     retval_json = readline(win.app.connection)
     retval = JSON.parse(retval_json)
     return retval["data"]
