@@ -3,6 +3,7 @@ const path = require('path')
 const url = require('url')
 const net = require('net')
 const os = require('os')
+const readline = require('readline')
 
 // Window creation
 var windows = {}
@@ -71,8 +72,6 @@ sysnotify_connection = null
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', function() {
-    buffer = ['']
-
     connection = net.connect(generatePipeName(process.argv[2]))
     connection.setEncoding('utf8')
 
@@ -84,17 +83,12 @@ app.on('ready', function() {
         app.quit()
     })
 
-    connection.on('data', function(data) {
-        lines = data.split('\n')
-        buffer[0] += lines[0]
-        for (var i = 1; i < lines.length; i++)
-          buffer[buffer.length] = lines[i]
+    const rl = readline.createInterface({input: connection, terminal: false, historySize: 0, crlfDelay: Infinity})
 
-        while (buffer.length > 1) {
-            cmd_as_json = JSON.parse(buffer.shift())
-            process_command(connection, cmd_as_json)
-        }
-    });
+    rl.on('line', function(line) {
+        cmd_as_json = JSON.parse(line)
+        process_command(connection, cmd_as_json)
+    })
 })
 
 app.on('window-all-closed', function() {
