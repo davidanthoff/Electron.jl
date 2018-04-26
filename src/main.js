@@ -11,9 +11,7 @@ var windows = {}
 function createWindow(connection, opts) {
     win = new BrowserWindow(opts)
     windows[win.id] = win
-    if (opts.url) {
-        win.loadURL(opts.url)
-    }
+    win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
     // win.webContents.openDevTools()
 
