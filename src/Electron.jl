@@ -4,15 +4,16 @@ module Electron
 using JSON, URIParser
 
 export Application, Window, URI, windows, applications
+const OptDict = Dict{String, Any}
 
 mutable struct Application
     id::UInt
-    connection
+    connection::IO
     proc
-    sysnotify_connection
+    sysnotify_connection::IO
     exists::Bool
 
-    function Application(id::Int, connection, proc, sysnotify_connection)
+    global function _Application(id::Int, connection::IO, proc, sysnotify_connection::IO)
         new_app = new(id, connection, proc, sysnotify_connection, true)
         push!(_global_applications, new_app)
         return new_app
@@ -24,7 +25,7 @@ mutable struct Window
     id::Int64
     exists::Bool
 
-    function Window(app::Application, id::Int64)
+    global function _Window(app::Application, id::Int64)
         new_window = new(app, id, true)
         push!(_global_windows, new_window)
         return new_window
@@ -38,10 +39,23 @@ const _global_windows = Vector{Window}()
 
 function __init__()
     _global_application_next_id[] = 1
+    atexit() do # let Electron know we want it to die quietly and sanely
+        for app in _global_applications
+            if app.exists
+                close(app)
+            end
+        end
+    end
+    nothing
 end
 
 function applications()
     return _global_applications
+end
+
+function default_application()
+    isempty(_global_applications) && Application()
+    return _global_applications[1]
 end
 
 function windows()
@@ -49,7 +63,7 @@ function windows()
 end
 
 function generate_pipe_name(name)
-    if is_windows()
+    return if is_windows()
         "\\\\.\\pipe\\$name"
     elseif is_unix()
         joinpath(tempdir(), name)
@@ -93,35 +107,52 @@ function Application()
     proc = spawn(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`)
 
     sock = accept(server)
+    close(server)
 
-    sysnotify_sock = accept(sysnotify_server)
-
-    sysnotify_task = @schedule begin
-        while true
-            line_json = readline(sysnotify_sock)
-            cmd_parsed = JSON.parse(line_json)
-            if cmd_parsed["cmd"] == "windowclosed"
-                win_index = findfirst(i->i.app.id==id && i.id==cmd_parsed["winid"], _global_windows)
-                _global_windows[win_index].exists = false
-                deleteat!(_global_windows, win_index)
-            elseif cmd_parsed["cmd"] == "appclosing"
-                break
+    let sysnotify_sock = accept(sysnotify_server)
+        close(sysnotify_server)
+        sysnotify_task = @schedule begin
+            try
+                try
+                    while true
+                        try
+                            line_json = readline(sysnotify_sock)
+                            isempty(line_json) && break # EOF
+                            cmd_parsed = JSON.parse(line_json)
+                            if cmd_parsed["cmd"] == "windowclosed"
+                                win_index = findfirst(i->i.app.id==id && i.id==cmd_parsed["winid"], _global_windows)
+                                _global_windows[win_index].exists = false
+                                deleteat!(_global_windows, win_index)
+                            elseif cmd_parsed["cmd"] == "appclosing"
+                                break
+                            end
+                        catch er
+                            bt = catch_backtrace()
+                            io = PipeBuffer()
+                            print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
+                            Base.showerror(IOContext(io, :limit => true), er, bt)
+                            println(io)
+                            write(STDERR, io)
+                        end
+                    end
+                finally
+                    # Cleanup all the windows that are associated with this application
+                    win_indices = sort(find(i->i.app.id==id, _global_windows), rev=true)
+                    for win_index in win_indices
+                        _global_windows[win_index].exists = false
+                        deleteat!(_global_windows, win_index)
+                    end
+                end
+            finally
+                # Cleanup the application instance
+                app_index = findfirst(i -> i.id == id, _global_applications)
+                _global_applications[app_index].exists = false
+                close(_global_applications[app_index].sysnotify_connection)
+                deleteat!(_global_applications, app_index)
             end
         end
-        # Cleanup all the windows that are associated with this application
-        win_indices = sort(find(i->i.app.id==id, _global_windows), rev=true)
-        for win_index in win_indices
-            _global_windows[win_index].exists = false
-            deleteat!(_global_windows, win_index)
-        end
-        # Cleanup the application instance
-        app_index = findfirst(i->i.id == id, _global_applications)
-        _global_applications[app_index].exists = false
-        close(_global_applications[app_index].sysnotify_connection)
-        deleteat!(_global_applications, app_index)
+        return _Application(id, sock, proc, sysnotify_sock)
     end
-
-    return Application(id, sock, proc, sysnotify_sock)
 end
 
 """
@@ -134,6 +165,22 @@ function Base.close(app::Application)
     close(app.connection)
 end
 
+function req_response(connection, cmd)
+    json = JSON.json(cmd)
+    c = Condition()
+    t = @schedule try
+        println(connection, json)
+        wait(c)
+    catch ex
+        close(connection) # kill Application, since it probably must be in a bad state now
+        rethrow(ex)
+    end
+    retval_json = readline(connection)
+    notify(c)
+    wait(t)
+    return JSON.parse(retval_json)
+end
+
 """
     run(app::Application, code::AbstractString)
 
@@ -143,9 +190,8 @@ value that the JavaScript expression returns.
 """
 function Base.run(app::Application, code::AbstractString)
     app.exists || error("Cannot run code in this application, the application does no longer exist.")
-    println(app.connection, JSON.json(Dict("cmd"=>"runcode", "target"=>"app", "code"=>code)))
-    retval_json = readline(app.connection)
-    retval = JSON.parse(retval_json)
+    message = OptDict("cmd" => "runcode", "target" => "app", "code" => code)
+    retval = req_response(app.connection, message)
     return retval["data"]
 end
 
@@ -158,85 +204,58 @@ the JavaScript expression returns.
 """
 function Base.run(win::Window, code::AbstractString)
     win.exists || error("Cannot run code in this window, the window does no longer exist.")
-    message = Dict("cmd"=>"runcode", "target"=>"window", "winid" => win.id, "code" => code)
-    println(win.app.connection, JSON.json(message))
-    retval_json = readline(win.app.connection)
-    retval = JSON.parse(retval_json)
+    message = OptDict("cmd" => "runcode", "target" => "window", "winid" => win.id, "code" => code)
+    retval = req_response(win.app.connection, message)
     return retval["data"]
 end
 
 """
-    function Window(app::Application, options::Dict)
+    function Window([app::Application,] options::Dict)
 
 Open a new Window in the application `app`. Pass the content
 of `options` to the Electron `BrowserWindow` constructor.
+
+If `app` is not specified, use the default Electron application,
+starting one if needed.
 """
-function Window(app::Application, options::Dict)
-    message = Dict("cmd" => "newwindow", "options" => options)
-    println(app.connection, JSON.json(message))
-    retval_json = readline(app.connection)
-    retval = JSON.parse(retval_json)
+function Window(app::Application, options::Dict=OptDict())
+    message = OptDict("cmd" => "newwindow", "options" => options)
+    retval = req_response(app.connection, message)
     ret_val = retval["data"]
-    return Window(app, ret_val)
+    return _Window(app, ret_val)
 end
 
 """
-    function Window(options::Dict)
-
-Open a new Window in the default Electron application. If no
-default application is running, first start one. Pass the content
-of `options` to the Electron `BrowserWindow` constructor.
-"""
-function Window(options::Dict)
-    if length(_global_applications)==0
-        Application()
-    end
-
-    return Window(_global_applications[1], options)
-end
-
-"""
-    function Window(app::Application, uri::URI)
+    function Window([app::Application,] uri::URI)
 
 Open a new Window in the application `app`. Show the content
 that `uri` points to in that new window.
+
+If `app` is not specified, use the default Electron application,
+starting one if needed.
 """
-function Window(app::Application, uri::URI; options::Union{Void,Dict}=nothing)
-    internal_options = Dict{String,Any}()
-
-    if options!==nothing
-        for (k,v) in options
-            internal_options[k] = deepcopy(v)
-        end
-    end
-
+function Window(app::Application, uri::URI; options::Dict=OptDict())
+    internal_options = OptDict()
+    merge!(internal_options, options)
     internal_options["url"] = string(uri)
-
     return Window(app, internal_options)
 end
 
 """
-    function Window(uri::URI)
+    function Window([app::Application,] uri::URI)
 
-Open a new Window in the default Electron application. If no
-default application is running, first start one. Show the content
-that `uri` points to in that new window.
+Open a new Window in the application `app`. Show the `content`
+as a text/html file with utf-8 encoding.
+
+If `app` is not specified, use the default Electron application,
+starting one if needed.
 """
-function Window(uri::URI; options::Union{Void,Dict}=nothing)
-    if length(_global_applications)==0
-        Application()
-    end
-
-    return Window(_global_applications[1], uri, options=options)
+function Window(app::Application, content::AbstractString; kwargs...)
+    return Window(app, URI("data:text/html;charset=utf-8," * escape(content)); kwargs...)
 end
 
-function Window(app::Application, content::AbstractString; options::Union{Void,Dict}=nothing)
-    return Window(app, URI("data:text/html;charset=utf-8," * escape(content)), options=options)
-end
-
-function Window(content::AbstractString; options::Union{Void,Dict}=nothing)
-    return Window(URI("data:text/html;charset=utf-8," * escape(content)), options=options)
-end
+Window(a1::Application, args...; kwargs...) = throw(MethodError(Window, (a1, args...)))
+Window(args...; kwargs...) = Window(default_application(), args...; kwargs...)
 
 """
     close(win::Window)
@@ -245,10 +264,8 @@ Close the windows referenced by `win`.
 """
 function Base.close(win::Window)
     win.exists || error("Cannot close this window, the window does no longer exist.")
-    message = Dict("cmd"=>"closewindow", "winid" => win.id)
-    println(win.app.connection, JSON.json(message))
-    retval_json = readline(win.app.connection)
-    retval = JSON.parse(retval_json)
+    message = OptDict("cmd" => "closewindow", "winid" => win.id)
+    retval = req_response(win.app.connection, message)
     return nothing
 end
 
