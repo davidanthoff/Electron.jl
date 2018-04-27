@@ -72,7 +72,7 @@ end
 
 function get_electron_binary_cmd()
     @static if is_apple()
-        return joinpath(@__DIR__, "..", "deps", "Julia.app", "Contents", "MacOS", "Julia")
+        return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
     elseif is_linux()
         return joinpath(@__DIR__, "..", "deps", "electron", "electron")
     elseif is_windows()

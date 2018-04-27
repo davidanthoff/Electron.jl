@@ -11,23 +11,24 @@ download(x) = run(BinDeps.download_cmd(x, basename(x)))
 cd(@__DIR__) do
     download("http://junolab.s3.amazonaws.com/blink/julia.png")
 
+    rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
+
     if is_apple()
         file = "electron-v$version-darwin-x64.zip"
         download("https://github.com/electron/electron/releases/download/v$version/$file")
-        run(`unzip -q $file`)
+        run(`unzip -q $file -d electron`)
         rm(file)
-        run(`mv Electron.app Julia.app`)
-        run(`mv Julia.app/Contents/MacOS/Electron Julia.app/Contents/MacOS/Julia`)
-        run(`sed -i.bak 's/Electron/Julia/' Julia.app/Contents/Info.plist`)
-        run(`cp $_icons Julia.app/Contents/Resources/electron.icns`)
-        run(`touch Julia.app`)  # Apparently this is necessary to tell the OS to double-check for the new icons.
+        run(`mv electron/Electron.app electron/Julia.app`)
+        run(`mv electron/Julia.app/Contents/MacOS/Electron electron/Julia.app/Contents/MacOS/Julia`)
+        run(`sed -i.bak 's/Electron/Julia/' electron/Julia.app/Contents/Info.plist`)        
+        run(`cp $_icons electron/Julia.app/Contents/Resources/electron.icns`)
+        run(`touch electron/Julia.app`)  # Apparently this is necessary to tell the OS to double-check for the new icons.
     end
 
     if is_windows()
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-win32-$arch.zip"
         download("https://github.com/electron/electron/releases/download/v$version/$file")
-        rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
         run(`7z x $file -oelectron -aoa`)
         rm(file)
     end
@@ -35,8 +36,7 @@ cd(@__DIR__) do
     if is_linux()
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-linux-$arch.zip"
-        download("https://github.com/electron/electron/releases/download/v$version/$file")
-        rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
+        download("https://github.com/electron/electron/releases/download/v$version/$file")        
         run(`unzip -q $file -d electron`)
         rm(file)
     end
