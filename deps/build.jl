@@ -27,6 +27,7 @@ cd(@__DIR__) do
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-win32-$arch.zip"
         download("https://github.com/electron/electron/releases/download/v$version/$file")
+        rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
         run(`7z x $file -oelectron -aoa`)
         rm(file)
     end
@@ -35,6 +36,7 @@ cd(@__DIR__) do
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-linux-$arch.zip"
         download("https://github.com/electron/electron/releases/download/v$version/$file")
+        rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
         run(`unzip -q $file -d electron`)
         rm(file)
     end
