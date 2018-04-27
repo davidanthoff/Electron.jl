@@ -1,6 +1,6 @@
 import BinDeps
 
-const version = "1.8.2"
+const version = "1.8.4"
 
 if is_apple()
     const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
