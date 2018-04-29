@@ -82,3 +82,13 @@ win = Window(URI("file://main.html"))
 
 result = run(win, "Math.Log(10)")
 ````
+
+## Examples
+
+The following packages currently use Electron.jl:
+
+* https://github.com/davidanthoff/DataVoyager.jl
+* https://github.com/davidanthoff/ElectronDisplay.jl
+
+Please add any other packages that depend on Electron.jl to this list via
+a pull request!

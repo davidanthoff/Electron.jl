@@ -6,6 +6,11 @@ using JSON, URIParser
 export Application, Window, URI, windows, applications
 const OptDict = Dict{String, Any}
 
+struct JSError
+    msg
+end
+Base.showerror(io::IO, e::JSError) = print(io, "JSError: ", e.msg)
+
 mutable struct Application
     id::UInt
     connection::IO
@@ -186,10 +191,12 @@ Run the JavaScript code that is passed in `code` in the main
 application thread of the `app` Electron process. Returns the
 value that the JavaScript expression returns.
 """
-function Base.run(app::Application, code::AbstractString)
+Base.run(app::Application, code::AbstractString) = run(app, String(code))
+function Base.run(app::Application, code::String)
     app.exists || error("Cannot run code in this application, the application does no longer exist.")
     message = OptDict("cmd" => "runcode", "target" => "app", "code" => code)
     retval = req_response(app.connection, message)
+    haskey(retval, "error") && throw(JSError(retval["error"]))
     return retval["data"]
 end
 

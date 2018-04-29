@@ -28,22 +28,26 @@ function createWindow(connection, opts) {
 function process_command(connection, cmd) {
     if (cmd.cmd=='runcode' && cmd.target=='app') {
         var retvar;
-        retval = eval(cmd.code)
-        connection.write(JSON.stringify({data: retval}) + '\n')
+        try {
+            retval = {data: eval(cmd.code)}
+        } catch (errval) {
+            retval = {error: JSON.stringify(errval)}
+        }
+        connection.write(JSON.stringify(retval) + '\n')
     }
     else if (cmd.cmd=='runcode' && cmd.target=='window') {
         var win = BrowserWindow.fromId(win.winid)
         win.webContents.executeJavaScript(cmd.code, true)
-        .then(function(result) {
+            .then(function(result) {
                 connection.write(JSON.stringify({data: result}) + '\n')
-            }).catch(function(err) {
+            }).catch(function(err) { // TODO: electron doesn't seem to call this and merely crashes instead
                 connection.write(JSON.stringify({error: err}) + '\n')
             })
     }
     else if (cmd.cmd=='closewindow') {
         var win = BrowserWindow.fromId(win.winid)
         win.destroy()
-        connection.write(JSON.stringify({})+'\n')
+        connection.write(JSON.stringify({}) + '\n')
     }
     else if (cmd.cmd == 'newwindow') {
         createWindow(connection, cmd.options)
