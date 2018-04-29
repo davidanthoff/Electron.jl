@@ -101,13 +101,11 @@ function Application()
     _global_application_next_id[] = id + 1
     process_id = getpid()
 
-    main_pipe_name = "juliaelectron-$process_id-$id"
-    main_pipe_name_full = generate_pipe_name(main_pipe_name)
-    server = listen(main_pipe_name_full)
+    main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
+    server = listen(main_pipe_name)
 
-    sysnotify_pipe_name = "juliaelectron-sysnotify-$process_id-$id"
-    sysnotify_pipe_name_full = generate_pipe_name(sysnotify_pipe_name)
-    sysnotify_server = listen(sysnotify_pipe_name_full)
+    sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
+    sysnotify_server = listen(sysnotify_pipe_name)
 
     proc = spawn(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`)
 
