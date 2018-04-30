@@ -11,23 +11,29 @@ a = applications()[1]
 @test isa(w, Window)
 
 @test length(applications()) == 1
-@test length(windows()) == 1
+@test length(windows(a)) == 1
 
 res = run(w, "Math.log(Math.exp(1))")
 
-@test res==1
+@test res == 1
 
 res = run(a, "Math.log(Math.exp(1))")
 
 @test res ==1
 
 close(w)
+@test length(applications()) == 1
+@test isempty(windows(a)) == 1
 
 w2 = Window(URI("file://test.html"))
 
 close(a)
+@test length(applications()) == 1
+@test length(windows(a)) == 1
 
 sleep(1)
+@test isempty(applications())
+@test isempty(windows(a))
 
 w3 = Window(Dict("url" => string(URI("file://test.html"))))
 
@@ -41,4 +47,4 @@ w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
 
 close(w3)
 
-end
+end # testset "Electron"

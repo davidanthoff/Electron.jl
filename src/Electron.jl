@@ -11,39 +11,51 @@ struct JSError
 end
 Base.showerror(io::IO, e::JSError) = print(io, "JSError: ", e.msg)
 
-mutable struct Application
-    id::UInt
+mutable struct _Application{T} # forward declaration of Application
     connection::IO
     proc
-    sysnotify_connection::IO
+    secure_cookie::Vector{UInt8}
+    windows::Vector{T}
     exists::Bool
 
-    global function _Application(id::Int, connection::IO, proc, sysnotify_connection::IO)
-        new_app = new(id, connection, proc, sysnotify_connection, true)
+    global function _Application(::Type{T}, connection::IO, proc, secure_cookie) where {T} # internal constructor
+        new_app = new{T}(connection, proc, secure_cookie, T[], true)
         push!(_global_applications, new_app)
         return new_app
     end
 end
 
 mutable struct Window
-    app::Application
+    app::_Application{Window}
     id::Int64
     exists::Bool
 
-    global function _Window(app::Application, id::Int64)
+    global function _Window(app::_Application{Window}, id::Int64) # internal constructor
         new_window = new(app, id, true)
-        push!(_global_windows, new_window)
+        push!(app.windows, new_window)
         return new_window
     end
 end
 
-const _global_applications = Vector{Application}(0)
-const _global_application_next_id = Ref{Int}(1)
+const Application = _Application{Window}
 
-const _global_windows = Vector{Window}()
+function Base.show(io::IO, app::Application)
+    if app.exists
+        if length(app.windows) == 1
+            appstate = ", [1 window])"
+        else
+            appstate = ", [$(length(app.windows)) windows])"
+        end
+    else
+        appstate = ", [dead])"
+    end
+    print(io, "Application(", app.connection, ", ", app.proc, appstate)
+end
+
+
+const _global_applications = Vector{Application}(0)
 
 function __init__()
-    _global_application_next_id[] = 1
     atexit() do # let Electron know we want it to die quietly and sanely
         for app in _global_applications
             if app.exists
@@ -63,8 +75,8 @@ function default_application()
     return _global_applications[1]
 end
 
-function windows()
-    return _global_windows
+function windows(app::Application)
+    return app.windows
 end
 
 function generate_pipe_name(name)
@@ -78,12 +90,10 @@ end
 function get_electron_binary_cmd()
     @static if is_apple()
         return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
-    elseif is_linux()
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron")
     elseif is_windows()
         return joinpath(@__DIR__, "..", "deps", "electron", "electron.exe")
-    else
-        error("Unknown platform.")
+    else # assume unix layout
+        return joinpath(@__DIR__, "..", "deps", "electron", "electron")
     end
 end
 
@@ -97,64 +107,88 @@ can be used in the construction of Electron windows.
 function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
-    id = _global_application_next_id[]
-    _global_application_next_id[] = id + 1
     process_id = getpid()
 
-    main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
+    local main_pipe_name
+    id = UInt(1)
+    while true
+        main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
+        ispath(main_pipe_name) || break
+        id += 1
+    end
     server = listen(main_pipe_name)
 
-    sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
+    local sysnotify_pipe_name
+    while true
+        sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
+        ispath(sysnotify_pipe_name) || break
+        id += 1
+    end
     sysnotify_server = listen(sysnotify_pipe_name)
 
-    proc = spawn(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`)
+    secure_cookie = rand(UInt8, 128)
+    _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`, "w", STDOUT)
+    write(proc, secure_cookie)
+    close(proc.in)
 
     sock = accept(server)
-    close(server)
+    if read!(sock, zero(secure_cookie)) != secure_cookie
+        close(server)
+        close(sysnotify_server)
+        close(sock)
+        error("Electron failed to authenticate with the proper security token")
+    end
 
     let sysnotify_sock = accept(sysnotify_server)
-        close(sysnotify_server)
-        sysnotify_task = @schedule begin
-            try
+        if read!(sysnotify_sock, zero(secure_cookie)) != secure_cookie
+            close(server)
+            close(sysnotify_server)
+            close(sysnotify_sock)
+            close(sock)
+            error("Electron failed to authenticate with the proper security token")
+        end
+        let app = _Application(Window, sock, proc, secure_cookie)
+            @schedule begin
                 try
-                    while true
-                        try
-                            line_json = readline(sysnotify_sock)
-                            isempty(line_json) && break # EOF
-                            cmd_parsed = JSON.parse(line_json)
-                            if cmd_parsed["cmd"] == "windowclosed"
-                                win_index = findfirst(i->i.app.id==id && i.id==cmd_parsed["winid"], _global_windows)
-                                _global_windows[win_index].exists = false
-                                deleteat!(_global_windows, win_index)
-                            elseif cmd_parsed["cmd"] == "appclosing"
-                                break
+                    try
+                        while true
+                            try
+                                line_json = readline(sysnotify_sock)
+                                isempty(line_json) && break # EOF
+                                cmd_parsed = JSON.parse(line_json)
+                                if cmd_parsed["cmd"] == "windowclosed"
+                                    win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
+                                    app.windows[win_index].exists = false
+                                    deleteat!(app.windows, win_index)
+                                elseif cmd_parsed["cmd"] == "appclosing"
+                                    break
+                                end
+                            catch er
+                                bt = catch_backtrace()
+                                io = PipeBuffer()
+                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
+                                Base.showerror(IOContext(io, :limit => true), er, bt)
+                                println(io)
+                                write(STDERR, io)
                             end
-                        catch er
-                            bt = catch_backtrace()
-                            io = PipeBuffer()
-                            print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
-                            Base.showerror(IOContext(io, :limit => true), er, bt)
-                            println(io)
-                            write(STDERR, io)
                         end
+                    finally
+                        # Cleanup all the windows that are associated with this application
+                        for w in app.windows
+                            w.exists = false
+                        end
+                        empty!(app.windows)
                     end
                 finally
-                    # Cleanup all the windows that are associated with this application
-                    win_indices = sort(find(i->i.app.id==id, _global_windows), rev=true)
-                    for win_index in win_indices
-                        _global_windows[win_index].exists = false
-                        deleteat!(_global_windows, win_index)
-                    end
+                    # Cleanup the application instance
+                    app.exists = false
+                    close(sysnotify_sock)
+                    app_index = findfirst(a -> a === app, _global_applications)
+                    deleteat!(_global_applications, app_index)
                 end
-            finally
-                # Cleanup the application instance
-                app_index = findfirst(i -> i.id == id, _global_applications)
-                _global_applications[app_index].exists = false
-                close(_global_applications[app_index].sysnotify_connection)
-                deleteat!(_global_applications, app_index)
             end
+            return app
         end
-        return _Application(id, sock, proc, sysnotify_sock)
     end
 end
 
@@ -168,7 +202,8 @@ function Base.close(app::Application)
     close(app.connection)
 end
 
-function req_response(connection, cmd)
+function req_response(app::Application, cmd)
+    connection = app.connection
     json = JSON.json(cmd)
     c = Condition()
     t = @schedule try
@@ -195,7 +230,7 @@ Base.run(app::Application, code::AbstractString) = run(app, String(code))
 function Base.run(app::Application, code::String)
     app.exists || error("Cannot run code in this application, the application does no longer exist.")
     message = OptDict("cmd" => "runcode", "target" => "app", "code" => code)
-    retval = req_response(app.connection, message)
+    retval = req_response(app, message)
     haskey(retval, "error") && throw(JSError(retval["error"]))
     return retval["data"]
 end
@@ -210,7 +245,7 @@ the JavaScript expression returns.
 function Base.run(win::Window, code::AbstractString)
     win.exists || error("Cannot run code in this window, the window does no longer exist.")
     message = OptDict("cmd" => "runcode", "target" => "window", "winid" => win.id, "code" => code)
-    retval = req_response(win.app.connection, message)
+    retval = req_response(win.app, message)
     return retval["data"]
 end
 
@@ -225,7 +260,7 @@ starting one if needed.
 """
 function Window(app::Application, options::Dict=OptDict())
     message = OptDict("cmd" => "newwindow", "options" => options)
-    retval = req_response(app.connection, message)
+    retval = req_response(app, message)
     ret_val = retval["data"]
     return _Window(app, ret_val)
 end
@@ -270,7 +305,7 @@ Close the windows referenced by `win`.
 function Base.close(win::Window)
     win.exists || error("Cannot close this window, the window does no longer exist.")
     message = OptDict("cmd" => "closewindow", "winid" => win.id)
-    retval = req_response(win.app.connection, message)
+    retval = req_response(win.app, message)
     return nothing
 end
 
