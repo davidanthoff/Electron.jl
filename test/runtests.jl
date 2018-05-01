@@ -2,6 +2,21 @@ using Electron
 using URIParser
 using Base.Test
 
+@testset "local URI" begin
+    dir = pwd(URI)
+    @test unescape(dir.path) == join(push!(split(pwd(), Base.Filesystem.path_separator_re), ""), "/")
+    @test dir.query == dir.fragment == dir.host == ""
+    @test string(dir) == "file://$(dir.path)"
+
+    __dirname = @__DIR__
+    dir = Electron.URI_file(__dirname, "")
+    @test URI(dir, path = dir.path * "test.html", query = "a", fragment = "b") ==
+        @LOCAL("test.html?a#b") ==
+        @LOCAL(begin; "test.html?a#b"; end) ==
+        Electron.URI_file(__dirname, "test.html?a#b")
+end
+
+
 @testset "Electron" begin
 
 w = Window(URI("file://test.html"))
@@ -25,7 +40,7 @@ close(w)
 @test length(applications()) == 1
 @test isempty(windows(a)) == 1
 
-w2 = Window(URI("file://test.html"))
+w2 = Window(@LOCAL("test.html"))
 
 close(a)
 @test length(applications()) == 1
@@ -35,9 +50,9 @@ sleep(1)
 @test isempty(applications())
 @test isempty(windows(a))
 
-w3 = Window(Dict("url" => string(URI("file://test.html"))))
+w3 = Window(Dict("url" => string(@LOCAL("test.html"))))
 
-w4 = Window(URI("file://test.html"), options=Dict("title" => "Window title"))
+w4 = Window(@LOCAL("test.html"), options=Dict("title" => "Window title"))
 
 w5 = Window("<body></body>", options=Dict("title" => "Window title"))
 
