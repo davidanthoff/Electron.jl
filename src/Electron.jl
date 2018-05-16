@@ -4,7 +4,6 @@ module Electron
 using JSON, URIParser
 
 export Application, Window, URI, windows, applications
-export @LOCAL
 const OptDict = Dict{String, Any}
 
 struct JSError
@@ -312,34 +311,6 @@ function Base.close(win::Window)
     return nothing
 end
 
-"""
-    URI_file(base, filespec)
-
-Construct an absolute URI to `filespec` relative to `base`.
-"""
-URI_file(base, filespec) = URI_file(base, URI("file:///$filespec"))
-function URI_file(base, filespec::URI)
-    base = join(map(URIParser.escape, split(base, Base.Filesystem.path_separator_re)), "/")
-    return URI(filespec, path = base * filespec.path)
-end
-
-"""
-    pwd(URI)
-
-Return `pwd()` as a `URI` resource.
-"""
-Base.pwd(::Type{URI}) = URI_file(pwd(), "")
-
-"""
-    @LOCAL(filespec)
-
-Construct an absolute URI to `filespec` relative to the source file containing the macro call.
-"""
-macro LOCAL(filespec)
-    # v0.7: base = String(__source__.file)
-    #       filespec isa String && return URI_file(base, filespec) # can construct eagerly
-    #       return :(URI_file($base, $(esc(filespec))))
-    return :(URI_file(@__DIR__, $(esc(filespec))))
-end
+include("contrib.jl")
 
 end
