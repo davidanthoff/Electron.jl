@@ -1,3 +1,6 @@
+# Electron.jl v0.2.0 Release Notes
+* Update electron version to 2.0.0
+
 # Electron.jl v0.1.2 Release Notes
 * Update electron version to 1.8.4
 * Make build.jl more robust
