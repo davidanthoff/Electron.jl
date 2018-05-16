@@ -199,6 +199,9 @@ Terminates the Electron application referenced by `app`.
 """
 function Base.close(app::Application)
     app.exists || error("Cannot close this application, the application does no longer exist.")
+    while length(windows(app))>0
+        close(first(windows(app)))
+    end
     close(app.connection)
 end
 
