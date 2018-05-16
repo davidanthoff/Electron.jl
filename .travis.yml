@@ -21,16 +21,6 @@ matrix:
   allow_failures:
   - julia: nightly
 
-addons:
-  apt:
-    packages:
-      - xvfb
-
-install:
-  - export DISPLAY=':99.0'
-  - Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-#before_script: # homebrew for mac
-#  - if [ $TRAVIS_OS_NAME = osx ]; then brew install gcc; fi
 before_script:
   - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
 
