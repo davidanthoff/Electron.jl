@@ -127,9 +127,8 @@ function Application()
     sysnotify_server = listen(sysnotify_pipe_name)
 
     secure_cookie = rand(UInt8, 128)
-    _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name`, "w", STDOUT)
-    write(proc, secure_cookie)
-    close(proc.in)
+    secure_cookie_encoded = base64encode(secure_cookie)
+    _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", STDOUT)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
@@ -199,6 +198,9 @@ Terminates the Electron application referenced by `app`.
 """
 function Base.close(app::Application)
     app.exists || error("Cannot close this application, the application does no longer exist.")
+    while length(windows(app))>0
+        close(first(windows(app)))
+    end
     close(app.connection)
 end
 
