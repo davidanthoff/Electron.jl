@@ -61,5 +61,9 @@ a2 = applications()[1]
 w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
 
 close(w3)
+close(w4)
+close(w5)
+close(w6)
+close(a2)
 
 end # testset "Electron"
