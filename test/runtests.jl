@@ -44,7 +44,7 @@ w2 = Window(@LOCAL("test.html"))
 
 close(a)
 @test length(applications()) == 1
-@test length(windows(a)) == 1
+@test length(windows(a)) == 0
 
 sleep(1)
 @test isempty(applications())
