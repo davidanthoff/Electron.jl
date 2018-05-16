@@ -1,5 +1,6 @@
 using Electron
 using URIParser
+using FilePaths
 using Base.Test
 
 @testset "local URI" begin
@@ -40,7 +41,7 @@ close(w)
 @test length(applications()) == 1
 @test isempty(windows(a)) == 1
 
-w2 = Window(URI("file://test.html"))
+w2 = Window(@LOCAL("test.html"))
 
 close(a)
 @test length(applications()) == 1

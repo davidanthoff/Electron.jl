@@ -1,7 +1,7 @@
 __precompile__()
 module Electron
 
-using JSON, URIParser
+using JSON, URIParser, FilePaths
 
 export Application, Window, URI, windows, applications
 const OptDict = Dict{String, Any}
@@ -284,7 +284,20 @@ function Window(app::Application, uri::URI; options::Dict=OptDict())
 end
 
 """
-    function Window([app::Application,] uri::URI)
+    function Window([app::Application,] path::AbstractPath)
+
+Open a new Window in the application `app`. Show the content
+that `path` points to in that new window.
+
+If `app` is not specified, use the default Electron application,
+starting one if needed.
+"""
+function Window(app::Application, path::AbstractPath; options::Dict=OptDict())
+    return Window(app, URI(path); options=options)
+end
+
+"""
+    function Window([app::Application,] content::AbstractString)
 
 Open a new Window in the application `app`. Show the `content`
 as a text/html file with utf-8 encoding.
