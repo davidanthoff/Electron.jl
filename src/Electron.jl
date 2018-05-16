@@ -324,6 +324,4 @@ function Base.close(win::Window)
     return nothing
 end
 
-include("contrib.jl")
-
 end
