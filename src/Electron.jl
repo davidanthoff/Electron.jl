@@ -19,7 +19,9 @@ mutable struct _Application{T} # forward declaration of Application
     exists::Bool
 
     global function _Application(::Type{T}, connection::IO, proc, secure_cookie) where {T} # internal constructor
+        println("BB")
         new_app = new{T}(connection, proc, secure_cookie, T[], true)
+        println("CC")
         push!(_global_applications, new_app)
         return new_app
     end
@@ -71,6 +73,7 @@ function applications()
 end
 
 function default_application()
+    println("AA")
     isempty(_global_applications) && Application()
     return _global_applications[1]
 end
@@ -105,9 +108,11 @@ for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 """
 function Application()
+    println("CC")
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
     process_id = getpid()
+    println("DD")
 
     local main_pipe_name
     id = UInt(1)
@@ -116,7 +121,9 @@ function Application()
         ispath(main_pipe_name) || break
         id += 1
     end
+    println("EE")
     server = listen(main_pipe_name)
+    println("FF")
 
     local sysnotify_pipe_name
     while true
@@ -125,10 +132,13 @@ function Application()
         id += 1
     end
     sysnotify_server = listen(sysnotify_pipe_name)
+    println("GG")
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
+    println("HH")
     _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", STDOUT)
+    println("II")
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
@@ -137,6 +147,7 @@ function Application()
         close(sock)
         error("Electron failed to authenticate with the proper security token")
     end
+    println("JJ")
 
     let sysnotify_sock = accept(sysnotify_server)
         if read!(sysnotify_sock, zero(secure_cookie)) != secure_cookie
