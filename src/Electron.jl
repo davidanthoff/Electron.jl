@@ -140,10 +140,16 @@ function Application()
     _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", STDOUT)
     println("II")
 
+    println(main_pipe_name)
+
     sock = accept(server)
+    println("III")
     if read!(sock, zero(secure_cookie)) != secure_cookie
+        println("III - 1")
         close(server)
+        println("III - 2")
         close(sysnotify_server)
+        println("III - 3")
         close(sock)
         error("Electron failed to authenticate with the proper security token")
     end
