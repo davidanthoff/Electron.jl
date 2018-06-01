@@ -11,8 +11,8 @@ using Base.Test
     __dirname = @__DIR__
     dir = Electron.URI_file(__dirname, "")
     @test URI(dir, path = dir.path * "test.html", query = "a", fragment = "b") ==
-        @LOCAL("test.html?a#b") ==
-        @LOCAL(begin; "test.html?a#b"; end) ==
+        Electron.@LOCAL("test.html?a#b") ==
+        Electron.@LOCAL(begin; "test.html?a#b"; end) ==
         Electron.URI_file(__dirname, "test.html?a#b")
 end
 
