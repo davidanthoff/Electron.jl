@@ -205,19 +205,30 @@ function Base.close(app::Application)
 end
 
 function req_response(app::Application, cmd)
+    println("1")
     connection = app.connection
     json = JSON.json(cmd)
+    println("2")
     c = Condition()
+    println("3")
     t = @schedule try
         println(connection, json)
+        println("4")
         wait(c)
+        println("5")
     catch ex
+        println("6")
         close(connection) # kill Application, since it probably must be in a bad state now
+        println("7")
         rethrow(ex)
     end
+    println("8")
     retval_json = readline(connection)
+    println("9")
     notify(c)
+    println("10")
     wait(t)
+    println("11")
     return JSON.parse(retval_json)
 end
 
@@ -262,8 +273,11 @@ starting one if needed.
 """
 function Window(app::Application, options::Dict=OptDict())
     message = OptDict("cmd" => "newwindow", "options" => options)
+    println("A 1")
     retval = req_response(app, message)
+    println("A 2")
     ret_val = retval["data"]
+    println("A 3")
     return _Window(app, ret_val)
 end
 
