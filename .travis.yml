@@ -21,10 +21,10 @@ matrix:
   allow_failures:
   - julia: nightly
 
-before_script:
-  - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
+before_install:
+  - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb +extension RANDR -- :99 -ac -screen 0 1280x1024x16"
 
 script:
-  - $TESTCMD -e 'Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron"; coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron"; coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
