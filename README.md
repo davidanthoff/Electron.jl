@@ -68,7 +68,7 @@ using Electron, URIParser
 
 app = Application()
 
-result = run(app, "Math.Log(10)")
+result = run(app, "Math.log(10)")
 ````
 
 The second argument of the ``run`` function is JavaScript code that will simply be executed as is in Electron.
@@ -80,7 +80,7 @@ using Electron, URIParser
 
 win = Window(URI("file://main.html"))
 
-result = run(win, "Math.Log(10)")
+result = run(win, "Math.log(10)")
 ````
 
 ## Examples
