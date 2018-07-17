@@ -1,3 +1,6 @@
+# Electron.jl v0.2.0 Release Notes
+* Drop julia 0.6 support, add julia 0.7 support
+
 # Electron.jl v0.1.2 Release Notes
 * Update electron version to 1.8.4
 * Make build.jl more robust

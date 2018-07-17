@@ -1,7 +1,7 @@
 __precompile__()
 module Electron
 
-using JSON, URIParser
+using JSON, URIParser, Sockets, Base64
 
 export Application, Window, URI, windows, applications
 const OptDict = Dict{String, Any}
@@ -53,7 +53,7 @@ function Base.show(io::IO, app::Application)
 end
 
 
-const _global_applications = Vector{Application}(0)
+const _global_applications = Vector{Application}(undef,0)
 
 function __init__()
     atexit() do # let Electron know we want it to die quietly and sanely
@@ -80,17 +80,17 @@ function windows(app::Application)
 end
 
 function generate_pipe_name(name)
-    return if is_windows()
+    return if Sys.iswindows()
         "\\\\.\\pipe\\$name"
-    elseif is_unix()
+    elseif Sys.isunix()
         joinpath(tempdir(), name)
     end
 end
 
 function get_electron_binary_cmd()
-    @static if is_apple()
+    @static if Sys.isapple()
         return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
-    elseif is_windows()
+    elseif Sys.iswindows()
         return joinpath(@__DIR__, "..", "deps", "electron", "electron.exe")
     else # assume unix layout
         return joinpath(@__DIR__, "..", "deps", "electron", "electron")
@@ -128,7 +128,7 @@ function Application()
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
-    _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", STDOUT)
+    proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
@@ -147,7 +147,7 @@ function Application()
             error("Electron failed to authenticate with the proper security token")
         end
         let app = _Application(Window, sock, proc, secure_cookie)
-            @schedule begin
+            @async begin
                 try
                     try
                         while true
@@ -168,7 +168,7 @@ function Application()
                                 print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
                                 Base.showerror(IOContext(io, :limit => true), er, bt)
                                 println(io)
-                                write(STDERR, io)
+                                write(stderr, io)
                             end
                         end
                     finally
@@ -208,16 +208,16 @@ function req_response(app::Application, cmd)
     connection = app.connection
     json = JSON.json(cmd)
     c = Condition()
-    t = @schedule try
+    t = @async try
         println(connection, json)
-        wait(c)
+        fetch(c)
     catch ex
         close(connection) # kill Application, since it probably must be in a bad state now
         rethrow(ex)
     end
     retval_json = readline(connection)
     notify(c)
-    wait(t)
+    fetch(t)
     return JSON.parse(retval_json)
 end
 
