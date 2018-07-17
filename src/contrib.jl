@@ -20,14 +20,15 @@ Return `pwd()` as a `URI` resource.
 """
 Base.pwd(::Type{URI}) = URI_file(pwd(), "")
 
-"""
-    @LOCAL(filespec)
+# TODO Fix for julia 0.7 and enable again
+# """
+#     @LOCAL(filespec)
 
-Construct an absolute URI to `filespec` relative to the source file containing the macro call.
-"""
-macro LOCAL(filespec)
-    # v0.7: base = String(__source__.file)
-    #       filespec isa String && return URI_file(base, filespec) # can construct eagerly
-    #       return :(URI_file($base, $(esc(filespec))))
-    return :(URI_file(@__DIR__, $(esc(filespec))))
-end
+# Construct an absolute URI to `filespec` relative to the source file containing the macro call.
+# """
+# macro LOCAL(filespec)
+#     # v0.7: base = String(__source__.file)
+#     #       filespec isa String && return URI_file(base, filespec) # can construct eagerly
+#     #       return :(URI_file($base, $(esc(filespec))))
+#     return :(URI_file(@__DIR__, $(esc(filespec))))
+# end

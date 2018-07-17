@@ -1,21 +1,19 @@
-import BinDeps
-
 const version = "1.8.4"
 
-if is_apple()
+if Sys.isapple()
     const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
 end
 
-download(x) = run(BinDeps.download_cmd(x, basename(x)))
+our_download(x) = download(x, basename(x))
 
 cd(@__DIR__) do
-    download("http://junolab.s3.amazonaws.com/blink/julia.png")
+    our_download("http://junolab.s3.amazonaws.com/blink/julia.png")
 
     rm(joinpath(@__DIR__, "electron"), force=true, recursive=true)
 
-    if is_apple()
+    if Sys.isapple()
         file = "electron-v$version-darwin-x64.zip"
-        download("https://github.com/electron/electron/releases/download/v$version/$file")
+        our_download("https://github.com/electron/electron/releases/download/v$version/$file")
         run(`unzip -q $file -d electron`)
         rm(file)
         run(`mv electron/Electron.app electron/Julia.app`)
@@ -25,18 +23,18 @@ cd(@__DIR__) do
         run(`touch electron/Julia.app`)  # Apparently this is necessary to tell the OS to double-check for the new icons.
     end
 
-    if is_windows()
+    if Sys.iswindows()
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-win32-$arch.zip"
-        download("https://github.com/electron/electron/releases/download/v$version/$file")
-        run(`7z x $file -oelectron -aoa`)
+        our_download("https://github.com/electron/electron/releases/download/v$version/$file")
+        run(`$(joinpath(Sys.BINDIR, "7z")) x $file -oelectron -aoa`)
         rm(file)
     end
 
-    if is_linux()
+    if Sys.islinux()
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-linux-$arch.zip"
-        download("https://github.com/electron/electron/releases/download/v$version/$file")        
+        our_download("https://github.com/electron/electron/releases/download/v$version/$file")        
         run(`unzip -q $file -d electron`)
         rm(file)
     end
