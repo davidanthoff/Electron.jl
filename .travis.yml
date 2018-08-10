@@ -19,6 +19,6 @@ matrix:
 before_script:
   - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
 script:
-  - $TESTCMD --color=yes -e "using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)"
+  - $TESTCMD --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
