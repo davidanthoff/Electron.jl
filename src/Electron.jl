@@ -1,4 +1,3 @@
-__precompile__()
 module Electron
 
 using JSON, URIParser, Sockets, Base64
