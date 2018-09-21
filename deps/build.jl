@@ -1,4 +1,4 @@
-const version = "1.8.4"
+const version = "3.0.0"
 
 if Sys.isapple()
     const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
