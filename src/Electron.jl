@@ -216,9 +216,11 @@ function Base.close(app::Application)
 end
 
 function req_response(app::Application, cmd)
+    @info "G"
     connection = app.connection
     json = JSON.json(cmd)
     c = Condition()
+    @info "H"
     t = @async try
         println(connection, json)
         fetch(c)
@@ -226,9 +228,13 @@ function req_response(app::Application, cmd)
         close(connection) # kill Application, since it probably must be in a bad state now
         rethrow(ex)
     end
+    @info "I"
     retval_json = readline(connection)
+    @info "J"
     notify(c)
+    @info "K"
     fetch(t)
+    @info "L"
     return JSON.parse(retval_json)
 end
 
@@ -272,8 +278,10 @@ If `app` is not specified, use the default Electron application,
 starting one if needed.
 """
 function Window(app::Application, options::Dict=OptDict())
-    message = OptDict("cmd" => "newwindow", "options" => options)
+    @info "E"
+    message = OptDict("cmd" => "newwindow", "options" => options)    
     retval = req_response(app, message)
+    @info "F"
     ret_val = retval["data"]
     return _Window(app, ret_val)
 end
