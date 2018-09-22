@@ -14,6 +14,8 @@ function createWindow(connection, opts) {
     win.setMenu(null)
     // win.webContents.openDevTools()
 
+    sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO E"}) + '\n')
+
     // Create a local variable that we'll use in
     // the closed event handler because the property
     // .id won't be accessible anymore when the window
@@ -28,6 +30,8 @@ function createWindow(connection, opts) {
             sysnotify_connection.write(JSON.stringify({cmd: "windowclosed", winid: win_id}) + '\n')
         })
     })
+
+    sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO F"}) + '\n')
 }
 
 function process_command(connection, cmd) {
