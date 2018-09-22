@@ -28,9 +28,10 @@ mutable struct Window
     app::_Application{Window}
     id::Int64
     exists::Bool
+    msg_handler::Union{Nothing,Function}
 
     global function _Window(app::_Application{Window}, id::Int64) # internal constructor
-        new_window = new(app, id, true)
+        new_window = new(app, id, true, nothing)
         push!(app.windows, new_window)
         return new_window
     end
@@ -127,6 +128,7 @@ function Application()
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
+    # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
     proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
 
     sock = accept(server)
@@ -160,7 +162,13 @@ function Application()
                                     deleteat!(app.windows, win_index)
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
-                                end
+                                elseif cmd_parsed["cmd"] == "msg_from_window"
+                                    win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
+                                    handler = app.windows[1].msg_handler
+                                    if handler!==nothing
+                                        Base.invokelatest(handler, cmd_parsed["payload"])
+                                    end
+                                end                
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
@@ -308,6 +316,10 @@ function Base.close(win::Window)
     message = OptDict("cmd" => "closewindow", "winid" => win.id)
     retval = req_response(win.app, message)
     return nothing
+end
+
+function set_msg_handler(f, win::Window)
+    win.msg_handler=f
 end
 
 include("contrib.jl")

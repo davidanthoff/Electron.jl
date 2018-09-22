@@ -1,4 +1,4 @@
-const {app, BrowserWindow} = require('electron')
+const {app, BrowserWindow, ipcMain} = require('electron')
 const path = require('path')
 const url = require('url')
 const net = require('net')
@@ -78,6 +78,11 @@ app.on('ready', function () {
         app.quit()
     })
 
+    ipcMain.on('msg-for-julia-process', (event, arg) => {
+        var win_id = BrowserWindow.fromWebContents(event.sender).id;
+        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
+    })
+    
     const rloptions = { input: connection, terminal: false, historySize: 0, crlfDelay: Infinity }
     const rl = readline.createInterface(rloptions)
 
