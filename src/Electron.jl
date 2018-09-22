@@ -222,10 +222,15 @@ function req_response(app::Application, cmd)
     c = Condition()
     @info "H"
     t = @async try
+        @info "AA"
         println(connection, json)
+        @info "BB"
         fetch(c)
+        @info "CC"
     catch ex
+        @info "DD"
         close(connection) # kill Application, since it probably must be in a bad state now
+        @info "EE"
         rethrow(ex)
     end
     @info "I"
