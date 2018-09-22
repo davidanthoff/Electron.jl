@@ -16,6 +16,10 @@ branches:
 matrix:
   allow_failures:
   - julia: nightly
+addons:
+  apt:
+    packages:
+      - libdbus
 before_script:
   - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
 script:
