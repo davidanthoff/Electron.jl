@@ -31,6 +31,11 @@ function createWindow(connection, opts) {
         })
     })
 
+    win.webContents.on("did-fail-load", function(event, errorCode, errorDescription, validatedURL, isMainFrame) {
+        sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO D"}) + '\n')
+        sysnotify_connection.write(JSON.stringify({cmd: "log", message: {msg: "FAILED", event: event, errorCode: errorCode}}) + '\n')
+    })    
+
     sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO F"}) + '\n')
 }
 
