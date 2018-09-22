@@ -144,8 +144,10 @@ function Application()
         close(sock)
         error("Electron failed to authenticate with the proper security token")
     end
+    @info "A"
 
     let sysnotify_sock = accept(sysnotify_server)
+        @info "B"
         if read!(sysnotify_sock, zero(secure_cookie)) != secure_cookie
             close(server)
             close(sysnotify_server)
@@ -153,6 +155,7 @@ function Application()
             close(sock)
             error("Electron failed to authenticate with the proper security token")
         end
+        @info "C"
         let app = _Application(Window, sock, proc, secure_cookie)
             @async begin
                 try
@@ -193,6 +196,7 @@ function Application()
                     deleteat!(_global_applications, app_index)
                 end
             end
+            @info "D"
             return app
         end
     end
