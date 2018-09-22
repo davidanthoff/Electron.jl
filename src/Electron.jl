@@ -169,6 +169,8 @@ function Application()
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
                                     app.windows[win_index].exists = false
                                     deleteat!(app.windows, win_index)
+                                elseif cmd_parsed["cmd"] == "log"
+                                    @info cmd_parsed["message"]
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
                                 end

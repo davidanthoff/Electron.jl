@@ -6,8 +6,11 @@ const os = require('os')
 const readline = require('readline')
 
 function createWindow(connection, opts) {
+    sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO A"}) + '\n')
     var win = new BrowserWindow(opts)
+    sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO B"}) + '\n')
     win.loadURL(opts.url ? opts.url : "about:blank")
+    sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO C"}) + '\n')
     win.setMenu(null)
     // win.webContents.openDevTools()
 
@@ -18,6 +21,7 @@ function createWindow(connection, opts) {
     var win_id = win.id
 
     win.webContents.on("did-finish-load", function() {
+        sysnotify_connection.write(JSON.stringify({cmd: "log", message: "app GOT TO D"}) + '\n')
         connection.write(JSON.stringify({data: win_id}) + '\n')
 
         win.on('closed', function() {
