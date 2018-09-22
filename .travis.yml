@@ -17,8 +17,10 @@ matrix:
   allow_failures:
   - julia: nightly
 before_script:
-  - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
 script:
-  - $TESTCMD --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)'
+  - julia --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
