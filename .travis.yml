@@ -16,15 +16,9 @@ branches:
 matrix:
   allow_failures:
   - julia: nightly
-addons:
-  apt:
-    packages:
-      - xvfb  
 before_script:
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
-  - sleep 3 # give xvfb some time to start
+  - if [[ `uname` = "Linux" ]]; then TESTCMD="xvfb-run julia"; else TESTCMD="julia"; fi
 script:
-  - julia --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)'
+  - $TESTCMD --color=yes -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("Electron"); Pkg.test("Electron", coverage=true)'
 after_success:
   - julia -e 'cd(Pkg.dir("Electron")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
