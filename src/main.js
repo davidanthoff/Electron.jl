@@ -18,6 +18,8 @@ function createWindow(connection, opts) {
     var win_id = win.id
 
     win.webContents.on("did-finish-load", function() {
+        win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }")
+
         connection.write(JSON.stringify({data: win_id}) + '\n')
 
         win.on('closed', function() {
