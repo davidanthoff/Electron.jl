@@ -64,6 +64,14 @@ a2 = applications()[1]
 
 w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
 
+w7 = Window(a2)
+
+run(w7, "sendMessageToJulia('foo')")
+
+@test take!(msgchannel(w7)) == "foo"
+
+close(w7)
+
 close(w3)
 close(w4)
 close(w5)

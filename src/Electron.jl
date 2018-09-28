@@ -2,8 +2,8 @@ module Electron
 
 using JSON, URIParser, Sockets, Base64
 
-export Application, Window, URI, windows, applications
-export toggle_devtools
+export Application, Window, URI, windows, applications, msgchannel, toggle_devtools
+
 const OptDict = Dict{String, Any}
 
 struct JSError
@@ -29,9 +29,10 @@ mutable struct Window
     app::_Application{Window}
     id::Int64
     exists::Bool
+    msg_channel::Channel{Any}
 
-    global function _Window(app::_Application{Window}, id::Int64) # internal constructor
-        new_window = new(app, id, true)
+    global function _Window(app::_Application{Window}, id::Int64; msg_channel_size=128) # internal constructor
+        new_window = new(app, id, true, Channel{Any}(msg_channel_size))
         push!(app.windows, new_window)
         return new_window
     end
@@ -128,6 +129,7 @@ function Application()
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
+    # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
     proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
 
     sock = accept(server)
@@ -158,10 +160,14 @@ function Application()
                                 if cmd_parsed["cmd"] == "windowclosed"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
                                     app.windows[win_index].exists = false
+                                    close(app.windows[win_index].msg_channel)
                                     deleteat!(app.windows, win_index)
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
-                                end
+                                elseif cmd_parsed["cmd"] == "msg_from_window"
+                                    win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
+                                    put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
+                                end                
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
@@ -314,6 +320,8 @@ function Base.close(win::Window)
     retval = req_response(win.app, message)
     return nothing
 end
+
+msgchannel(win::Window) = win.msg_channel
 
 include("contrib.jl")
 
