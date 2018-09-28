@@ -44,6 +44,8 @@ close(w)
 
 w2 = Window(URI("file://test.html"))
 
+toggle_devtools(w2)
+
 close(a)
 @test length(applications()) == 1
 @test length(windows(a)) == 0

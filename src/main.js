@@ -32,10 +32,11 @@ function process_command(connection, cmd) {
     if (cmd.cmd == 'runcode' && cmd.target == 'app') {
         var retvar;
         try {
-            retval = {data: eval(cmd.code)}
+            x = eval(cmd.code)
+            retval = {data: x===undefined ? null : x}
         } catch (errval) {
             retval = {error: JSON.stringify(errval)}
-        }
+        }        
         connection.write(JSON.stringify(retval) + '\n')
     }
     else if (cmd.cmd == 'runcode' && cmd.target == 'window') {
