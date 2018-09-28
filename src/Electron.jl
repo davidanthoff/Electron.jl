@@ -3,6 +3,7 @@ module Electron
 using JSON, URIParser, Sockets, Base64
 
 export Application, Window, URI, windows, applications
+export toggle_devtools
 const OptDict = Dict{String, Any}
 
 struct JSError
@@ -297,6 +298,10 @@ end
 
 Window(a1::Application, args...; kwargs...) = throw(MethodError(Window, (a1, args...)))
 Window(args...; kwargs...) = Window(default_application(), args...; kwargs...)
+
+function toggle_devtools(w::Window)
+    run(w.app, "BrowserWindow.fromId($(w.id)).webContents.toggleDevTools()")
+end
 
 """
     close(win::Window)
