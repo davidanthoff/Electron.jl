@@ -61,7 +61,7 @@ using Electron, URIParser
 win = Window(URI("file://main.html"))
 ````
 
-Finally, you can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
+You can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
 
 ````julia
 using Electron, URIParser
@@ -81,6 +81,22 @@ using Electron, URIParser
 win = Window(URI("file://main.html"))
 
 result = run(win, "Math.log(10)")
+````
+
+You can send messages from a render thread back to julia by calling the javascript function ``sendMessageToJulia``. On the julia side, every window has a ``Channel`` for these messages. You can access the channel for a given window with the ``msgchannel`` function, and then use the standard julia API to take messages out of this channel:
+
+````julia
+using Electron
+
+win = Window()
+
+result = run(win, "sendMessageToJulia('foo')")
+
+ch = msgchannel(win)
+
+msg = take!(ch)
+
+println(msg)
 ````
 
 ## Examples
