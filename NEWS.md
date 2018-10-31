@@ -1,3 +1,6 @@
+# Electron.jl v0.3.0 Release Notes
+* Add support for callbacks from Electron to julia
+
 # Electron.jl v0.2.0 Release Notes
 * Drop julia 0.6 support, add julia 0.7 support
 
