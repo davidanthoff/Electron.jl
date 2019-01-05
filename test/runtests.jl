@@ -70,6 +70,12 @@ run(w7, "sendMessageToJulia('foo')")
 
 @test take!(msgchannel(w7)) == "foo"
 
+loadhtml(w7, "<body>bar</body>")
+
+run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
+
+@test occursin("bar", take!(msgchannel(w7)))
+
 close(w7)
 
 close(w3)
