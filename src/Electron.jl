@@ -2,7 +2,7 @@ module Electron
 
 using JSON, URIParser, Sockets, Base64
 
-export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, loadurl, loadhtml
+export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load
 
 const OptDict = Dict{String, Any}
 
@@ -258,24 +258,24 @@ function Base.run(win::Window, code::AbstractString)
 end
 
 """
-    loadurl(win::Window, url::AbstractString)
+    load(win::Window, url::AbstractString)
 
 Load `url` in the Electron window `win`.
 """
-function loadurl(win::Window, url::AbstractString)
+function load(win::Window, url::URI)
     win.exists || error("Cannot load URL in this window, the window does no longer exist.")
-    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => url)
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(url))
     req_response(win.app, message)
     return nothing
 end
 
 """
-    loadurl(win::Window, html::AbstractString)
+    load(win::Window, html::AbstractString)
 
 Load `html` in the Electron window `win`.
 """
-loadhtml(win::Window, html::AbstractString) =
-    loadurl(win, "data:text/html;charset=utf-8," * escape(html))
+load(win::Window, html::AbstractString) =
+    load(win, URI("data:text/html;charset=utf-8," * escape(html)))
 
 """
     function Window([app::Application,] options::Dict)
