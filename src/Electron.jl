@@ -258,13 +258,13 @@ function Base.run(win::Window, code::AbstractString)
 end
 
 """
-    load(win::Window, url::AbstractString)
+    load(win::Window, uri::AbstractString)
 
-Load `url` in the Electron window `win`.
+Load `uri` in the Electron window `win`.
 """
-function load(win::Window, url::URI)
-    win.exists || error("Cannot load URL in this window, the window does no longer exist.")
-    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(url))
+function load(win::Window, uri::URI)
+    win.exists || error("Cannot load URI in this window, the window does no longer exist.")
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(uri))
     req_response(win.app, message)
     return nothing
 end
