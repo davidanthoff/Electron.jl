@@ -1,3 +1,6 @@
+# Electron.jl v0.4.0 Release Notes
+* Add load function
+
 # Electron.jl v0.3.0 Release Notes
 * Add support for callbacks from Electron to julia
 
