@@ -258,7 +258,7 @@ function Base.run(win::Window, code::AbstractString)
 end
 
 """
-    load(win::Window, uri::AbstractString)
+    load(win::Window, uri::URI)
 
 Load `uri` in the Electron window `win`.
 """
