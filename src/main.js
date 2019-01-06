@@ -19,7 +19,9 @@ function createWindow(connection, opts) {
 
     win.webContents.on("did-finish-load", function() {
         win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }")
+    })
 
+    win.webContents.once("did-finish-load", function() {
         connection.write(JSON.stringify({data: win_id}) + '\n')
 
         win.on('closed', function() {
@@ -47,6 +49,13 @@ function process_command(connection, cmd) {
             }).catch(function(err) { // TODO: electron doesn't seem to call this and merely crashes instead
                 connection.write(JSON.stringify({error: err}) + '\n')
             })
+    }
+    else if (cmd.cmd == 'loadurl') {
+        var win = BrowserWindow.fromId(cmd.winid)
+        win.loadURL(cmd.url)
+        win.webContents.once("did-finish-load", function() {
+            connection.write(JSON.stringify({}) + '\n')
+        })
     }
     else if (cmd.cmd == 'closewindow') {
         var win = BrowserWindow.fromId(cmd.winid)
