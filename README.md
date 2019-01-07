@@ -53,6 +53,15 @@ win = Window(app, URI("file://main.html"))
 
 Note that you need to pass a URI that points to an HTML file to the ``Window`` constructor. This HTML file will be displayed in the new window.
 
+You can update pre-existing ``Window`` using function ``load``:
+
+````julia
+load(win, URI("http://julialang.org"))
+load(win, """
+<img src="https://raw.githubusercontent.com/JuliaGraphics/julia-logo-graphics/master/images/julia-logo-325-by-225.png">
+""")
+````
+
 You can also call the ``Window`` constructor without passing an ``Application``, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) creates a default application for you:
 
 ````julia
