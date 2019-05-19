@@ -1,4 +1,4 @@
-const version = "4.1.4"
+const version = "5.0.1"
 
 if Sys.isapple()
     const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
@@ -18,7 +18,7 @@ cd(@__DIR__) do
         rm(file)
         run(`mv electron/Electron.app electron/Julia.app`)
         run(`mv electron/Julia.app/Contents/MacOS/Electron electron/Julia.app/Contents/MacOS/Julia`)
-        run(`sed -i.bak 's/Electron/Julia/' electron/Julia.app/Contents/Info.plist`)        
+        run(`sed -i.bak 's/Electron/Julia/' electron/Julia.app/Contents/Info.plist`)
         run(`cp $_icons electron/Julia.app/Contents/Resources/electron.icns`)
         run(`touch electron/Julia.app`)  # Apparently this is necessary to tell the OS to double-check for the new icons.
     end
@@ -34,7 +34,7 @@ cd(@__DIR__) do
     if Sys.islinux()
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-linux-$arch.zip"
-        our_download("https://github.com/electron/electron/releases/download/v$version/$file")        
+        our_download("https://github.com/electron/electron/releases/download/v$version/$file")
         run(`unzip -q $file -d electron`)
         rm(file)
     end
