@@ -6,6 +6,7 @@ julia:
   - 0.7
   - 1.0
   - 1.1
+  - 1.2
   - nightly
 dist: xenial
 services:
@@ -13,7 +14,7 @@ services:
 addons:
   apt:
     packages:
-    - libgconf-2-4    
+    - libgconf-2-4
 notifications:
   email: false
 branches:
