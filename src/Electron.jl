@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load
 
@@ -92,7 +92,7 @@ function get_electron_binary_cmd()
     @static if Sys.isapple()
         return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
     elseif Sys.iswindows()
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron.exe")
+        return joinpath(artifact"electron", "electron.exe")
     else # assume unix layout
         return joinpath(@__DIR__, "..", "deps", "electron", "electron")
     end

@@ -1,0 +1,8 @@
+[[electron]]
+arch = "x86_64"
+git-tree-sha1 = "7f610ced1ad8fa3e0b2cce43cbc13b6ca4e04cde"
+os = "windows"
+
+    [[electron.download]]
+    sha256 = "30d05d086e0e579b0d3a7da531bbdd6db23f94720c24a7264ee64deb06563d29"
+    url = "https://github.com/electron/electron/releases/download/v4.1.4/electron-v4.1.4-win32-x64.zip"
