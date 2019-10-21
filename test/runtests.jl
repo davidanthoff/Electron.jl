@@ -83,8 +83,8 @@ run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
     @test ElectronAPI.isFocused(win) isa Bool
 
     bounds = ElectronAPI.getBounds(win)
-    boundskeys = Set(["width", "height", "x", "y"])
-    @test boundskeys <= Set(keys(bounds))
+    boundskeys = ["width", "height", "x", "y"]
+    @test Set(boundskeys) <= Set(keys(bounds))
     @test all(isa.(get.(Ref(bounds), boundskeys, nothing), Real))
 
     close(win)
