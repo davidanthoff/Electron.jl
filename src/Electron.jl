@@ -2,7 +2,7 @@ module Electron
 
 using JSON, URIParser, Sockets, Base64
 
-export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load
+export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
 const OptDict = Dict{String, Any}
 
@@ -342,6 +342,42 @@ function Base.close(win::Window)
 end
 
 msgchannel(win::Window) = win.msg_channel
+
+"""
+    ElectronAPI
+
+A shim object for calling Electron API functions.
+
+See:
+* <https://electronjs.org/docs/api/browser-window>
+
+# Examples
+```jldoctest
+julia> using Electron
+
+julia> win = Window();
+
+julia> ElectronAPI.setBackgroundColor(win, "#000");
+
+julia> ElectronAPI.show(win);
+```
+"""
+ElectronAPI
+
+struct ElectronAPIType end
+const ElectronAPI = ElectronAPIType()
+
+struct ElectronAPIFunction <: Function
+    name::Symbol
+end
+
+Base.getproperty(::ElectronAPIType, name::Symbol) = ElectronAPIFunction(name)
+
+function (api::ElectronAPIFunction)(w::Window, args...)
+    name = api.name
+    json_args = JSON.json(collect(args))
+    run(w.app, "BrowserWindow.fromId($(w.id)).$name(...$json_args)")
+end
 
 include("contrib.jl")
 
