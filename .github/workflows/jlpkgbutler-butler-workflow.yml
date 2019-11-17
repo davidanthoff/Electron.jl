@@ -14,10 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1.0.0
       - uses: julia-actions/setup-julia@latest
-      - uses: webfactory/ssh-agent@v0.1.1
-        with:
-          ssh-private-key: ${{ secrets.JLPKGBUTLER_TOKEN }}
       - uses: davidanthoff/julia-pkgbutler@releases/v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-private-key: ${{ secrets.JLPKGBUTLER_TOKEN }}
           channel: stable
