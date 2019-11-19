@@ -1,3 +1,11 @@
+# Electron.jl v1.1.0 Release Notes
+* Add ElectronAPI
+* Fix a bug on Julia 1.3
+* Update Electron to version 4.2.12
+
+# Electron.jl v1.0.0 Release Notes
+* Update Electron to version 4.1.4
+
 # Electron.jl v0.4.0 Release Notes
 * Add load function
 
