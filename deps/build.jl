@@ -4,6 +4,12 @@ if Sys.isapple()
     const _icons = normpath(joinpath(@__DIR__, "../res/julia-icns.icns"))
 end
 
+if isdefined(Base, :LIBEXECDIR)
+    const exe7z = joinpath(Sys.BINDIR, Base.LIBEXECDIR, "7z.exe")
+else
+    const exe7z = joinpath(Sys.BINDIR, "7z.exe")
+end
+
 our_download(x) = download(x, basename(x))
 
 cd(@__DIR__) do
@@ -27,7 +33,8 @@ cd(@__DIR__) do
         arch = Int == Int64 ? "x64" : "ia32"
         file = "electron-v$version-win32-$arch.zip"
         our_download("https://github.com/electron/electron/releases/download/v$version/$file")
-        run(`$(joinpath(Sys.BINDIR, "7z")) x $file -oelectron -aoa`)
+
+        run(`$exe7z x $file -oelectron -aoa`)
         rm(file)
     end
 
