@@ -2,6 +2,7 @@
 * Add ElectronAPI
 * Fix a bug on Julia 1.3
 * Update Electron to version 4.2.12
+* Add prep_test_env function
 
 # Electron.jl v1.0.0 Release Notes
 * Update Electron to version 4.1.4
