@@ -4,6 +4,15 @@ using JSON, URIParser, Sockets, Base64
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
+function prep_test_env()
+    if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
+        if Sys.islinux()
+            run(Cmd(`Xvfb :99 -screen 0 1024x768x24`), wait=false)
+            ENV["DISPLAY"] = ":99"
+        end
+    end
+end
+
 const OptDict = Dict{String, Any}
 
 struct JSError

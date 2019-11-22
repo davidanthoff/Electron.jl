@@ -2,6 +2,8 @@ using Electron
 using URIParser
 using Test
 
+Electron.prep_test_env()
+
 @testset "Electron" begin
 
 @testset "local URI" begin
