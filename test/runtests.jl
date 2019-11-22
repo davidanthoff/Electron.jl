@@ -8,8 +8,6 @@ if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
         # run(`export DISPLAY=':99.0'`)
         run(Cmd(`Xvfb :99 -screen 0 1024x768x24`), wait=false)
         ENV["DISPLAY"] = ":99"
-
-        error()
     end
 end
 
