@@ -5,7 +5,7 @@ on:
     branches:
       - master
   schedule:
-    - cron: '0 */1 * * *'
+    - cron: '*/5 * * * *'
 
 jobs:
   butler:
@@ -20,4 +20,4 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           ssh-private-key: ${{ secrets.JLPKGBUTLER_TOKEN }}
-          channel: stable
+          channel: dev
