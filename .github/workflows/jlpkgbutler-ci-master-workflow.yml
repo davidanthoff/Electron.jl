@@ -22,6 +22,7 @@ jobs:
       - uses: julia-actions/setup-julia@latest
         with:
           version: ${{ matrix.julia-version }}
+          arch: ${{ matrix.julia-arch }}
       - uses: julia-actions/julia-buildpkg@latest
         env:
           PYTHON: ""
