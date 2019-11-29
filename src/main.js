@@ -1,4 +1,4 @@
-const {app, BrowserWindow} = require('electron')
+const {app, BrowserWindow, ipcMain} = require('electron')
 const path = require('path')
 const url = require('url')
 const net = require('net')
@@ -6,6 +6,13 @@ const os = require('os')
 const readline = require('readline')
 
 function createWindow(connection, opts) {
+    if ('webPreferences' in opts) {
+        opts.webPreferences['nodeIntegration'] = true
+    }
+    else {
+        opts['webPreferences'] = {nodeIntegration: true};
+    }
+    opts.webPreferences.nodeIntegration = true
     var win = new BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -18,6 +25,10 @@ function createWindow(connection, opts) {
     var win_id = win.id
 
     win.webContents.on("did-finish-load", function() {
+        win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }")
+    })
+
+    win.webContents.once("did-finish-load", function() {
         connection.write(JSON.stringify({data: win_id}) + '\n')
 
         win.on('closed', function() {
@@ -30,7 +41,8 @@ function process_command(connection, cmd) {
     if (cmd.cmd == 'runcode' && cmd.target == 'app') {
         var retvar;
         try {
-            retval = {data: eval(cmd.code)}
+            x = eval(cmd.code)
+            retval = {data: x===undefined ? null : x}
         } catch (errval) {
             retval = {error: JSON.stringify(errval)}
         }
@@ -44,6 +56,13 @@ function process_command(connection, cmd) {
             }).catch(function(err) { // TODO: electron doesn't seem to call this and merely crashes instead
                 connection.write(JSON.stringify({error: err}) + '\n')
             })
+    }
+    else if (cmd.cmd == 'loadurl') {
+        var win = BrowserWindow.fromId(cmd.winid)
+        win.loadURL(cmd.url)
+        win.webContents.once("did-finish-load", function() {
+            connection.write(JSON.stringify({}) + '\n')
+        })
     }
     else if (cmd.cmd == 'closewindow') {
         var win = BrowserWindow.fromId(cmd.winid)
@@ -76,6 +95,11 @@ app.on('ready', function () {
     connection.on('end', function () {
         sysnotify_connection.write(JSON.stringify({ cmd: "appclosing" }) + '\n')
         app.quit()
+    })
+
+    ipcMain.on('msg-for-julia-process', (event, arg) => {
+        var win_id = BrowserWindow.fromWebContents(event.sender).id;
+        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
     })
 
     const rloptions = { input: connection, terminal: false, historySize: 0, crlfDelay: Infinity }

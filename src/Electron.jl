@@ -1,9 +1,28 @@
-__precompile__()
 module Electron
 
-using JSON, URIParser, FilePaths
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths
 
-export Application, Window, URI, windows, applications
+export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
+
+function conditional_electron_load()
+    try
+        return artifact"electronjs_app"
+    catch error
+        return nothing
+    end
+end
+
+const electronjs_path = conditional_electron_load()
+
+function prep_test_env()
+    if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
+        if Sys.islinux()
+            run(Cmd(`Xvfb :99 -screen 0 1024x768x24`), wait=false)
+            ENV["DISPLAY"] = ":99"
+        end
+    end
+end
+
 const OptDict = Dict{String, Any}
 
 struct JSError
@@ -29,9 +48,10 @@ mutable struct Window
     app::_Application{Window}
     id::Int64
     exists::Bool
+    msg_channel::Channel{Any}
 
-    global function _Window(app::_Application{Window}, id::Int64) # internal constructor
-        new_window = new(app, id, true)
+    global function _Window(app::_Application{Window}, id::Int64; msg_channel_size=128) # internal constructor
+        new_window = new(app, id, true, Channel{Any}(msg_channel_size))
         push!(app.windows, new_window)
         return new_window
     end
@@ -53,7 +73,7 @@ function Base.show(io::IO, app::Application)
 end
 
 
-const _global_applications = Vector{Application}(0)
+const _global_applications = Vector{Application}(undef,0)
 
 function __init__()
     atexit() do # let Electron know we want it to die quietly and sanely
@@ -80,20 +100,22 @@ function windows(app::Application)
 end
 
 function generate_pipe_name(name)
-    return if is_windows()
+    return if Sys.iswindows()
         "\\\\.\\pipe\\$name"
-    elseif is_unix()
+    elseif Sys.isunix()
         joinpath(tempdir(), name)
     end
 end
 
 function get_electron_binary_cmd()
-    @static if is_apple()
-        return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
-    elseif is_windows()
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron.exe")
+    if electronjs_path===nothing
+        return "electron"
+    elseif Sys.isapple()
+        return joinpath(electronjs_path, "Julia.app", "Contents", "MacOS", "Julia")
+    elseif Sys.iswindows()
+        return joinpath(electronjs_path, "electron.exe")
     else # assume unix layout
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron")
+        return joinpath(electronjs_path, "electron")
     end
 end
 
@@ -128,7 +150,8 @@ function Application()
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
-    _, proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", STDOUT)
+    # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
+    proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
@@ -147,7 +170,7 @@ function Application()
             error("Electron failed to authenticate with the proper security token")
         end
         let app = _Application(Window, sock, proc, secure_cookie)
-            @schedule begin
+            @async begin
                 try
                     try
                         while true
@@ -158,9 +181,13 @@ function Application()
                                 if cmd_parsed["cmd"] == "windowclosed"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
                                     app.windows[win_index].exists = false
+                                    close(app.windows[win_index].msg_channel)
                                     deleteat!(app.windows, win_index)
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
+                                elseif cmd_parsed["cmd"] == "msg_from_window"
+                                    win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
+                                    put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
                                 end
                             catch er
                                 bt = catch_backtrace()
@@ -168,7 +195,7 @@ function Application()
                                 print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
                                 Base.showerror(IOContext(io, :limit => true), er, bt)
                                 println(io)
-                                write(STDERR, io)
+                                write(stderr, io)
                             end
                         end
                     finally
@@ -208,16 +235,16 @@ function req_response(app::Application, cmd)
     connection = app.connection
     json = JSON.json(cmd)
     c = Condition()
-    t = @schedule try
+    t = @async try
         println(connection, json)
-        wait(c)
+        fetch(c)
     catch ex
         close(connection) # kill Application, since it probably must be in a bad state now
         rethrow(ex)
     end
     retval_json = readline(connection)
     notify(c)
-    wait(t)
+    fetch(t)
     return JSON.parse(retval_json)
 end
 
@@ -250,6 +277,26 @@ function Base.run(win::Window, code::AbstractString)
     retval = req_response(win.app, message)
     return retval["data"]
 end
+
+"""
+    load(win::Window, uri::URI)
+
+Load `uri` in the Electron window `win`.
+"""
+function load(win::Window, uri::URI)
+    win.exists || error("Cannot load URI in this window, the window does no longer exist.")
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(uri))
+    req_response(win.app, message)
+    return nothing
+end
+
+"""
+    load(win::Window, html::AbstractString)
+
+Load `html` in the Electron window `win`.
+"""
+load(win::Window, html::AbstractString) =
+    load(win, URI("data:text/html;charset=utf-8," * escape(html)))
 
 """
     function Window([app::Application,] options::Dict)
@@ -312,6 +359,10 @@ end
 Window(a1::Application, args...; kwargs...) = throw(MethodError(Window, (a1, args...)))
 Window(args...; kwargs...) = Window(default_application(), args...; kwargs...)
 
+function toggle_devtools(w::Window)
+    run(w.app, "BrowserWindow.fromId($(w.id)).webContents.toggleDevTools()")
+end
+
 """
     close(win::Window)
 
@@ -323,5 +374,45 @@ function Base.close(win::Window)
     retval = req_response(win.app, message)
     return nothing
 end
+
+msgchannel(win::Window) = win.msg_channel
+
+"""
+    ElectronAPI
+
+A shim object for calling Electron API functions.
+
+See:
+* <https://electronjs.org/docs/api/browser-window>
+
+# Examples
+```jldoctest
+julia> using Electron
+
+julia> win = Window();
+
+julia> ElectronAPI.setBackgroundColor(win, "#000");
+
+julia> ElectronAPI.show(win);
+```
+"""
+ElectronAPI
+
+struct ElectronAPIType end
+const ElectronAPI = ElectronAPIType()
+
+struct ElectronAPIFunction <: Function
+    name::Symbol
+end
+
+Base.getproperty(::ElectronAPIType, name::Symbol) = ElectronAPIFunction(name)
+
+function (api::ElectronAPIFunction)(w::Window, args...)
+    name = api.name
+    json_args = JSON.json(collect(args))
+    run(w.app, "BrowserWindow.fromId($(w.id)).$name(...$json_args)")
+end
+
+include("contrib.jl")
 
 end

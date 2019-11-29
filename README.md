@@ -53,6 +53,15 @@ win = Window(app, URI("file://main.html"))
 
 Note that you need to pass a URI that points to an HTML file to the ``Window`` constructor. This HTML file will be displayed in the new window.
 
+You can update pre-existing ``Window`` using function ``load``:
+
+````julia
+load(win, URI("http://julialang.org"))
+load(win, """
+<img src="https://raw.githubusercontent.com/JuliaGraphics/julia-logo-graphics/master/images/julia-logo-325-by-225.png">
+""")
+````
+
 You can also call the ``Window`` constructor without passing an ``Application``, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) creates a default application for you:
 
 ````julia
@@ -61,14 +70,14 @@ using Electron, URIParser
 win = Window(URI("file://main.html"))
 ````
 
-Finally, you can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
+You can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
 
 ````julia
 using Electron, URIParser
 
 app = Application()
 
-result = run(app, "Math.Log(10)")
+result = run(app, "Math.log(10)")
 ````
 
 The second argument of the ``run`` function is JavaScript code that will simply be executed as is in Electron.
@@ -80,7 +89,23 @@ using Electron, URIParser
 
 win = Window(URI("file://main.html"))
 
-result = run(win, "Math.Log(10)")
+result = run(win, "Math.log(10)")
+````
+
+You can send messages from a render thread back to julia by calling the javascript function ``sendMessageToJulia``. On the julia side, every window has a ``Channel`` for these messages. You can access the channel for a given window with the ``msgchannel`` function, and then use the standard julia API to take messages out of this channel:
+
+````julia
+using Electron
+
+win = Window()
+
+result = run(win, "sendMessageToJulia('foo')")
+
+ch = msgchannel(win)
+
+msg = take!(ch)
+
+println(msg)
 ````
 
 ## Examples
