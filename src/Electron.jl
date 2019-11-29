@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64, Pkg.Artifacts
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
@@ -291,6 +291,18 @@ function load(win::Window, uri::URI)
 end
 
 """
+    load(win::Window, path::AbstractPath)
+
+Load `path` in the Electron window `win`.
+"""
+function load(win::Window, path::AbstractPath)
+    win.exists || error("Cannot load path in this window, the window does no longer exist.")
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(URI(path)))
+    req_response(win.app, message)
+    return nothing
+end
+
+"""
     load(win::Window, html::AbstractString)
 
 Load `html` in the Electron window `win`.
@@ -331,7 +343,20 @@ function Window(app::Application, uri::URI; options::Dict=OptDict())
 end
 
 """
-    function Window([app::Application,] uri::URI)
+    function Window([app::Application,] path::AbstractPath)
+
+Open a new Window in the application `app`. Show the content
+that `path` points to in that new window.
+
+If `app` is not specified, use the default Electron application,
+starting one if needed.
+"""
+function Window(app::Application, path::AbstractPath; options::Dict=OptDict())
+    return Window(app, URI(path); options=options)
+end
+
+"""
+    function Window([app::Application,] content::AbstractString)
 
 Open a new Window in the application `app`. Show the `content`
 as a text/html file with utf-8 encoding.
@@ -399,7 +424,5 @@ function (api::ElectronAPIFunction)(w::Window, args...)
     json_args = JSON.json(collect(args))
     run(w.app, "BrowserWindow.fromId($(w.id)).$name(...$json_args)")
 end
-
-include("contrib.jl")
 
 end
