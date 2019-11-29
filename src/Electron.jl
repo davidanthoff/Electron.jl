@@ -133,14 +133,13 @@ can be used in the construction of Electron windows.
 function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
-    process_id = getpid()
 
     id = uuid1()
-    main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
+    main_pipe_name = generate_pipe_name("jlelectron-$id")
     server = listen(main_pipe_name)
 
     id = uuid1()
-    sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
+    sysnotify_pipe_name = generate_pipe_name("jlelectron-sn-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
     secure_cookie = rand(UInt8, 128)
