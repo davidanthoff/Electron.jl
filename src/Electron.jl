@@ -425,6 +425,4 @@ function (api::ElectronAPIFunction)(w::Window, args...)
     run(w.app, "BrowserWindow.fromId($(w.id)).$name(...$json_args)")
 end
 
-include("contrib.jl")
-
 end
