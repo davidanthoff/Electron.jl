@@ -291,6 +291,18 @@ function load(win::Window, uri::URI)
 end
 
 """
+    load(win::Window, path::AbstractPath)
+
+Load `path` in the Electron window `win`.
+"""
+function load(win::Window, path::AbstractPath)
+    win.exists || error("Cannot load path in this window, the window does no longer exist.")
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(URI(path)))
+    req_response(win.app, message)
+    return nothing
+end
+
+"""
     load(win::Window, html::AbstractString)
 
 Load `html` in the Electron window `win`.
