@@ -1,8 +1,18 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
+
+function conditional_electron_load()
+    try
+        return artifact"electronjs_app"
+    catch error
+        return nothing
+    end
+end
+
+const electronjs_path = conditional_electron_load()
 
 function prep_test_env()
     if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
@@ -98,12 +108,14 @@ function generate_pipe_name(name)
 end
 
 function get_electron_binary_cmd()
-    @static if Sys.isapple()
-        return joinpath(@__DIR__, "..", "deps", "electron", "Julia.app", "Contents", "MacOS", "Julia")
+    if electronjs_path===nothing
+        return "electron"
+    elseif Sys.isapple()
+        return joinpath(electronjs_path, "Julia.app", "Contents", "MacOS", "Julia")
     elseif Sys.iswindows()
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron.exe")
+        return joinpath(electronjs_path, "electron.exe")
     else # assume unix layout
-        return joinpath(@__DIR__, "..", "deps", "electron", "electron")
+        return joinpath(electronjs_path, "electron")
     end
 end
 
@@ -176,7 +188,7 @@ function Application()
                                 elseif cmd_parsed["cmd"] == "msg_from_window"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
                                     put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
-                                end                
+                                end
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
