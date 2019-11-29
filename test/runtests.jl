@@ -28,7 +28,7 @@ res = run(a, "Math.log(Math.exp(1))")
 
 close(w)
 @test length(applications()) == 1
-@test isempty(windows(a)) == 1
+@test isempty(windows(a))
 
 w2 = Window(join(@__PATH__, p"test.html"))
 
@@ -67,6 +67,16 @@ run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
 load(w7, join(@__PATH__, p"test.html"))
 load(w7, URI(join(@__PATH__, p"test.html")))
 
+close(w7)
+
+close(w3)
+close(w4)
+close(w5)
+close(w6)
+close(a2)
+
+end # testset "Core"
+
 @testset "ElectronAPI" begin
     win = Window()
 
@@ -80,15 +90,5 @@ load(w7, URI(join(@__PATH__, p"test.html")))
 
     close(win)
 end
-
-close(w7)
-
-close(w3)
-close(w4)
-close(w5)
-close(w6)
-close(a2)
-
-end # testset "Electron"
 
 end

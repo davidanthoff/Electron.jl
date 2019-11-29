@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
@@ -74,6 +74,7 @@ end
 
 
 const _global_applications = Vector{Application}(undef,0)
+const _global_default_application = Ref{Union{Nothing,Application}}(nothing)
 
 function __init__()
     atexit() do # let Electron know we want it to die quietly and sanely
@@ -91,8 +92,11 @@ function applications()
 end
 
 function default_application()
-    isempty(_global_applications) && Application()
-    return _global_applications[1]
+    if _global_default_application[]===nothing || _global_default_application[].exists==false
+        _global_default_application[] = Application()
+    end
+
+    return _global_default_application[]
 end
 
 function windows(app::Application)
@@ -131,21 +135,12 @@ function Application()
     mainjs = joinpath(@__DIR__, "main.js")
     process_id = getpid()
 
-    local main_pipe_name
-    id = UInt(1)
-    while true
-        main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
-        ispath(main_pipe_name) || break
-        id += 1
-    end
+    id = uuid1()
+    main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
     server = listen(main_pipe_name)
 
-    local sysnotify_pipe_name
-    while true
-        sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
-        ispath(sysnotify_pipe_name) || break
-        id += 1
-    end
+    id = uuid1()
+    sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
     secure_cookie = rand(UInt8, 128)
@@ -228,6 +223,7 @@ function Base.close(app::Application)
     while length(windows(app))>0
         close(first(windows(app)))
     end
+    app.exists = false
     close(app.connection)
 end
 
