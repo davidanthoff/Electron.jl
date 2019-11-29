@@ -64,6 +64,9 @@ run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
 
 @test occursin("bar", take!(msgchannel(w7)))
 
+load(w7, join(@__PATH__, p"test.html"))
+load(w7, URI(join(@__PATH__, p"test.html")))
+
 @testset "ElectronAPI" begin
     win = Window()
 
