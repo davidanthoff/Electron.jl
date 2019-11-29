@@ -115,7 +115,7 @@ function get_electron_binary_cmd()
     elseif Sys.iswindows()
         return joinpath(electronjs_path, "electron.exe")
     else # assume unix layout
-        return joinpath(electronjs_path, "electron")
+        return joinpath(electronjs_path, "electron --no-sandbox")
     end
 end
 
