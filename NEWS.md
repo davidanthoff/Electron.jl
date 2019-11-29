@@ -1,3 +1,8 @@
+# Electron.jl v2.0.0 Release Notes
+* Update Electron to version 7.1.2
+* Use artifact system
+* Drop pre Julia 1.3 support
+
 # Electron.jl v1.1.0 Release Notes
 * Add ElectronAPI
 * Fix a bug on Julia 1.3

@@ -6,6 +6,13 @@ const os = require('os')
 const readline = require('readline')
 
 function createWindow(connection, opts) {
+    if ('webPreferences' in opts) {
+        opts.webPreferences['nodeIntegration'] = true
+    }
+    else {
+        opts['webPreferences'] = {nodeIntegration: true};
+    }
+    opts.webPreferences.nodeIntegration = true
     var win = new BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -38,7 +45,7 @@ function process_command(connection, cmd) {
             retval = {data: x===undefined ? null : x}
         } catch (errval) {
             retval = {error: JSON.stringify(errval)}
-        }        
+        }
         connection.write(JSON.stringify(retval) + '\n')
     }
     else if (cmd.cmd == 'runcode' && cmd.target == 'window') {
@@ -94,7 +101,7 @@ app.on('ready', function () {
         var win_id = BrowserWindow.fromWebContents(event.sender).id;
         sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
     })
-    
+
     const rloptions = { input: connection, terminal: false, historySize: 0, crlfDelay: Infinity }
     const rl = readline.createInterface(rloptions)
 
