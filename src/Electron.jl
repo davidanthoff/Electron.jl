@@ -151,7 +151,7 @@ function Application()
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
     # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
-    proc = open(`$electron_path --no-sandbox $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
+    proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
