@@ -12,7 +12,7 @@ steps:
   commands:
   - uname -a
   - apt-get update
-  - apt-get install -y libglib2.0-0 libx11-6 xvfb libx11-xcb-dev libxcomposite-dev
+  - apt-get install -y libglib2.0-0 libx11-6 xvfb libx11-xcb-dev libxcomposite-dev libxcursor-dev
   - "xvfb-run julia --project=. --check-bounds=yes --color=yes -e 'using InteractiveUtils; versioninfo(verbose=true); using Pkg; Pkg.build(); Pkg.test(coverage=true)'"
 
 ---
@@ -29,7 +29,7 @@ steps:
   commands:
   - uname -a
   - apt-get update
-  - apt-get install -y libglib2.0-0 libx11-6 xvfb libx11-xcb-dev libxcomposite-dev
+  - apt-get install -y libglib2.0-0 libx11-6 xvfb libx11-xcb-dev libxcomposite-dev libxcursor-dev
   - "xvfb-run julia --project=. --check-bounds=yes --color=yes -e 'using InteractiveUtils; versioninfo(verbose=true); using Pkg; Pkg.build(); Pkg.test(coverage=true)'"
 
 ...
