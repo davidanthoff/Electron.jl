@@ -134,12 +134,12 @@ function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
 
-    id = uuid1()
-    main_pipe_name = generate_pipe_name("jlelectron-$id")
+    id = replace(string(uuid1()), "-"=>"")
+    main_pipe_name = generate_pipe_name("jlel-$id")
     server = listen(main_pipe_name)
 
-    id = uuid1()
-    sysnotify_pipe_name = generate_pipe_name("jlelectron-sn-$id")
+    id = replace(string(uuid1()), "-"=>"")
+    sysnotify_pipe_name = generate_pipe_name("jlel-sn-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
     secure_cookie = rand(UInt8, 128)
