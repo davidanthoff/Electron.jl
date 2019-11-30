@@ -1,3 +1,6 @@
+# Electron.jl v2.0.1 Release Notes
+* Tag the right version
+
 # Electron.jl v2.0.0 Release Notes
 * Update Electron to version 7.1.2
 * Use artifact system
