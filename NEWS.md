@@ -2,6 +2,9 @@
 * Update Electron to version 7.1.2
 * Use artifact system
 * Drop pre Julia 1.3 support
+* Drop support for functionality in contrib folder
+* Handle errors in renderer
+* Add FilePaths integration
 
 # Electron.jl v1.1.0 Release Notes
 * Add ElectronAPI
