@@ -22,6 +22,8 @@ res = run(w, "Math.log(Math.exp(1))")
 
 @test res == 1
 
+@test_throws ErrorException run(w, "syntaxerror")
+
 res = run(a, "Math.log(Math.exp(1))")
 
 @test res ==1
