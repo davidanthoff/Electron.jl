@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths
+using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
@@ -131,21 +131,12 @@ function Application()
     mainjs = joinpath(@__DIR__, "main.js")
     process_id = getpid()
 
-    local main_pipe_name
-    id = UInt(1)
-    while true
-        main_pipe_name = generate_pipe_name("juliaelectron-$process_id-$id")
-        ispath(main_pipe_name) || break
-        id += 1
-    end
+    id = replace(string(uuid1()), "-"=>"")
+    main_pipe_name = generate_pipe_name("jlel-$id")
     server = listen(main_pipe_name)
 
-    local sysnotify_pipe_name
-    while true
-        sysnotify_pipe_name = generate_pipe_name("juliaelectron-sysnotify-$process_id-$id")
-        ispath(sysnotify_pipe_name) || break
-        id += 1
-    end
+    id = replace(string(uuid1()), "-"=>"")
+    sysnotify_pipe_name = generate_pipe_name("jlel-sn-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
     secure_cookie = rand(UInt8, 128)
