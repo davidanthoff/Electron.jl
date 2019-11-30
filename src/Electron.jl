@@ -74,6 +74,7 @@ end
 
 
 const _global_applications = Vector{Application}(undef,0)
+const _global_default_application = Ref{Union{Nothing,Application}}(nothing)
 
 function __init__()
     atexit() do # let Electron know we want it to die quietly and sanely
@@ -91,8 +92,11 @@ function applications()
 end
 
 function default_application()
-    isempty(_global_applications) && Application()
-    return _global_applications[1]
+    if _global_default_application[]===nothing || _global_default_application[].exists==false
+        _global_default_application[] = Application()
+    end
+
+    return _global_default_application[]
 end
 
 function windows(app::Application)
@@ -129,7 +133,6 @@ can be used in the construction of Electron windows.
 function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
-    process_id = getpid()
 
     id = replace(string(uuid1()), "-"=>"")
     main_pipe_name = generate_pipe_name("jlel-$id")
@@ -219,6 +222,7 @@ function Base.close(app::Application)
     while length(windows(app))>0
         close(first(windows(app)))
     end
+    app.exists = false
     close(app.connection)
 end
 
