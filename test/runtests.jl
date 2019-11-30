@@ -91,4 +91,8 @@ end # testset "Core"
     close(win)
 end
 
+for app in applications()
+    close(app)
+end
+
 end
