@@ -314,7 +314,7 @@ load(win::Window, html::AbstractString) =
     function Window([app::Application,] options::Dict)
 
 Open a new Window in the application `app`. Pass the content
-of `options` to the Electron `BrowserWindow` constructor.
+of `options` to the Electron `electron.BrowserWindow` constructor.
 
 If `app` is not specified, use the default Electron application,
 starting one if needed.
@@ -372,7 +372,7 @@ Window(a1::Application, args...; kwargs...) = throw(MethodError(Window, (a1, arg
 Window(args...; kwargs...) = Window(default_application(), args...; kwargs...)
 
 function toggle_devtools(w::Window)
-    run(w.app, "BrowserWindow.fromId($(w.id)).webContents.toggleDevTools()")
+    run(w.app, "electron.BrowserWindow.fromId($(w.id)).webContents.toggleDevTools()")
 end
 
 """
@@ -422,7 +422,7 @@ Base.getproperty(::ElectronAPIType, name::Symbol) = ElectronAPIFunction(name)
 function (api::ElectronAPIFunction)(w::Window, args...)
     name = api.name
     json_args = JSON.json(collect(args))
-    run(w.app, "BrowserWindow.fromId($(w.id)).$name(...$json_args)")
+    run(w.app, "electron.BrowserWindow.fromId($(w.id)).$name(...$json_args)")
 end
 
 end
