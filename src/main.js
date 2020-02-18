@@ -44,7 +44,7 @@ function process_command(connection, cmd) {
             x = eval(cmd.code)
             retval = {data: x===undefined ? null : x}
         } catch (errval) {
-            retval = {error: JSON.stringify(errval)}
+            retval = {error: errval.toString()}
         }
         connection.write(JSON.stringify(retval) + '\n')
     }
