@@ -1,4 +1,4 @@
-const {app, BrowserWindow, ipcMain} = require('electron')
+const electron = require('electron')
 const path = require('path')
 const url = require('url')
 const net = require('net')
@@ -13,7 +13,7 @@ function createWindow(connection, opts) {
         opts['webPreferences'] = {nodeIntegration: true};
     }
     opts.webPreferences.nodeIntegration = true
-    var win = new BrowserWindow(opts)
+    var win = new electron.BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
     // win.webContents.openDevTools()
@@ -49,7 +49,7 @@ function process_command(connection, cmd) {
         connection.write(JSON.stringify(retval) + '\n')
     }
     else if (cmd.cmd == 'runcode' && cmd.target == 'window') {
-        var win = BrowserWindow.fromId(cmd.winid)
+        var win = electron.BrowserWindow.fromId(cmd.winid)
         win.webContents.executeJavaScript(cmd.code, true)
             .then(function(result) {
                 connection.write(JSON.stringify({data: result}) + '\n')
@@ -58,14 +58,14 @@ function process_command(connection, cmd) {
             })
     }
     else if (cmd.cmd == 'loadurl') {
-        var win = BrowserWindow.fromId(cmd.winid)
+        var win = electron.BrowserWindow.fromId(cmd.winid)
         win.loadURL(cmd.url)
         win.webContents.once("did-finish-load", function() {
             connection.write(JSON.stringify({}) + '\n')
         })
     }
     else if (cmd.cmd == 'closewindow') {
-        var win = BrowserWindow.fromId(cmd.winid)
+        var win = electron.BrowserWindow.fromId(cmd.winid)
         win.destroy()
         connection.write(JSON.stringify({}) + '\n')
     }
@@ -86,7 +86,7 @@ function secure_connect(addr, secure_cookie) {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', function () {
+electron.app.on('ready', function () {
     var secure_cookie = Buffer.from(process.argv[4], 'base64');
 
     var connection = secure_connect(process.argv[2], secure_cookie)
@@ -94,11 +94,11 @@ app.on('ready', function () {
 
     connection.on('end', function () {
         sysnotify_connection.write(JSON.stringify({ cmd: "appclosing" }) + '\n')
-        app.quit()
+        electron.app.quit()
     })
 
-    ipcMain.on('msg-for-julia-process', (event, arg) => {
-        var win_id = BrowserWindow.fromWebContents(event.sender).id;
+    electron.ipcMain.on('msg-for-julia-process', (event, arg) => {
+        var win_id = electron.BrowserWindow.fromWebContents(event.sender).id;
         sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
     })
 
@@ -112,6 +112,6 @@ app.on('ready', function () {
 
 })
 
-app.on('window-all-closed', function() {
+electron.app.on('window-all-closed', function() {
 
 })
