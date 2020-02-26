@@ -5,6 +5,10 @@ const net = require('net')
 const os = require('os')
 const readline = require('readline')
 
+const BrowserWindow = electron.BrowserWindow;
+const app = electron.app;
+const ipcMain = electron.ipcMain;
+
 function createWindow(connection, opts) {
     if ('webPreferences' in opts) {
         opts.webPreferences['nodeIntegration'] = true
