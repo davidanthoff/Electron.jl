@@ -10,4 +10,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ssh: ${{ secrets.JLPKGBUTLER_TOKEN }}
-          branches: false
+          branches: true
