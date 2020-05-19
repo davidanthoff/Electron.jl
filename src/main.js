@@ -43,7 +43,7 @@ function createWindow(connection, opts) {
 
 function process_command(connection, cmd) {
     if (cmd.cmd == 'runcode' && cmd.target == 'app') {
-        var retvar;
+        let retval;
         try {
             x = eval(cmd.code)
             retval = {data: x===undefined ? null : x}
@@ -56,7 +56,8 @@ function process_command(connection, cmd) {
         var win = electron.BrowserWindow.fromId(cmd.winid)
         win.webContents.executeJavaScript(cmd.code, true)
             .then(function(result) {
-                connection.write(JSON.stringify({data: result}) + '\n')
+                const data = {data: result === undefined ? null : result}
+                connection.write(JSON.stringify(data) + '\n')
             }).catch(function(err) { // TODO: electron doesn't seem to call this and merely crashes instead
                 connection.write(JSON.stringify({error: err}) + '\n')
             })

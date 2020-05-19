@@ -12,7 +12,6 @@ Electron.prep_test_env()
 w = Window(URI("file://test.html"))
 
 a = applications()[1]
-
 @test isa(w, Window)
 
 @test length(applications()) == 1
