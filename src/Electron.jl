@@ -270,11 +270,14 @@ function Base.run(win::Window, code::AbstractString)
     win.exists || error("Cannot run code in this window, the window does no longer exist.")
     message = OptDict("cmd" => "runcode", "target" => "window", "winid" => win.id, "code" => code)
     retval = req_response(win.app, message)
-    if haskey(retval, "data")
-        return retval["data"]
-    else
+    @assert haskey(retval, "status")
+    if retval["status"] == "success"
+        return get(retval, "data", nothing)
+    elseif retval["status"] == "error"
         @assert haskey(retval, "error")
         error("JSError: $(JSON.json(retval["error"]))")
+    else
+        error("Internal error.")
     end
 end
 

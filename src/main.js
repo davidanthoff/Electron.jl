@@ -56,9 +56,9 @@ function process_command(connection, cmd) {
         var win = electron.BrowserWindow.fromId(cmd.winid)
         win.webContents.executeJavaScript(cmd.code, true)
             .then(function(result) {
-                connection.write(JSON.stringify({data: result}) + '\n')
+                connection.write(JSON.stringify({status: 'success', data: result}) + '\n')
             }).catch(function(err) { // TODO: electron doesn't seem to call this and merely crashes instead
-                connection.write(JSON.stringify({error: err}) + '\n')
+                connection.write(JSON.stringify({status: 'error', error: err}) + '\n')
             })
     }
     else if (cmd.cmd == 'loadurl') {
