@@ -7,94 +7,94 @@ Electron.prep_test_env()
 
 @testset "Electron" begin
 
-@testset "Core" begin
+    @testset "Core" begin
 
-w = Window(URI("file://test.html"))
+        w = Window(URI("file://test.html"))
 
-a = applications()[1]
+        a = applications()[1]
 
-@test isa(w, Window)
+        @test isa(w, Window)
 
-@test length(applications()) == 1
-@test length(windows(a)) == 1
+        @test length(applications()) == 1
+        @test length(windows(a)) == 1
 
-res = run(w, "Math.log(Math.exp(1))")
+        res = run(w, "Math.log(Math.exp(1))")
 
-@test res == 1
+        @test res == 1
 
-@test_throws ErrorException run(w, "syntaxerror")
+        @test_throws ErrorException run(w, "syntaxerror")
 
-res = run(a, "Math.log(Math.exp(1))")
+        res = run(a, "Math.log(Math.exp(1))")
 
-@test res ==1
+        @test res == 1
 
-close(w)
-@test length(applications()) == 1
-@test isempty(windows(a))
+        close(w)
+        @test length(applications()) == 1
+        @test isempty(windows(a))
 
-w2 = Window(join(@__PATH__, p"test.html"))
+        w2 = Window(join(@__PATH__, p"test.html"))
 
-toggle_devtools(w2)
+        toggle_devtools(w2)
 
-close(a)
-@test length(applications()) == 1
-@test length(windows(a)) == 0
+        close(a)
+        @test length(applications()) == 1
+        @test length(windows(a)) == 0
 
-sleep(1)
-@test isempty(applications())
-@test isempty(windows(a))
+        sleep(1)
+        @test isempty(applications())
+        @test isempty(windows(a))
 
-w3 = Window(Dict("url" => string(URI("file://test.html"))))
+        w3 = Window(Dict("url" => string(URI("file://test.html"))))
 
-w4 = Window(URI("file://test.html"), options=Dict("title" => "Window title"))
+        w4 = Window(URI("file://test.html"), options = Dict("title" => "Window title"))
 
-w5 = Window("<body></body>", options=Dict("title" => "Window title"))
+        w5 = Window("<body></body>", options = Dict("title" => "Window title"))
 
-a2 = applications()[1]
+        a2 = applications()[1]
 
-w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
+        w6 = Window(a2, "<body></body>", options = Dict("title" => "Window title"))
 
-w7 = Window(a2)
+        w7 = Window(a2)
 
-run(w7, "sendMessageToJulia('foo')")
+        run(w7, "sendMessageToJulia('foo')")
 
-@test take!(msgchannel(w7)) == "foo"
+        @test take!(msgchannel(w7)) == "foo"
 
-load(w7, "<body>bar</body>")
+        load(w7, "<body>bar</body>")
 
-run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
+        run(w7, "sendMessageToJulia(window.document.documentElement.innerHTML)")
 
-@test occursin("bar", take!(msgchannel(w7)))
+        @test occursin("bar", take!(msgchannel(w7)))
 
-load(w7, join(@__PATH__, p"test.html"))
-load(w7, URI(join(@__PATH__, p"test.html")))
+        load(w7, join(@__PATH__, p"test.html"))
+        load(w7, URI(join(@__PATH__, p"test.html")))
 
-close(w7)
+        close(w7)
 
-close(w3)
-close(w4)
-close(w5)
-close(w6)
-close(a2)
+        close(w3)
+        close(w4)
+        close(w5)
+        close(w6)
+        close(a2)
 
-end # testset "Core"
+    end # testset "Core"
 
-@testset "ElectronAPI" begin
-    win = Window()
+    @testset "ElectronAPI" begin
+        win = Window()
 
-    @test (ElectronAPI.setBackgroundColor(win, "#000"); true)
-    @test ElectronAPI.isFocused(win) isa Bool
+        @test (ElectronAPI.setBackgroundColor(win, "#000"); true)
+        @test ElectronAPI.isFocused(win) isa Bool
 
-    bounds = ElectronAPI.getBounds(win)
-    boundskeys = ["width", "height", "x", "y"]
-    @test Set(boundskeys) <= Set(keys(bounds))
-    @test all(isa.(get.(Ref(bounds), boundskeys, nothing), Real))
+        bounds = ElectronAPI.getBounds(win)
+        boundskeys = ["width", "height", "x", "y"]
+        @test Set(boundskeys) <= Set(keys(bounds))
+        @test all(isa.(get.(Ref(bounds), boundskeys, nothing), Real))
 
-    close(win)
-end
+        close(win)
+    end
 
-for app in applications()
-    close(app)
-end
+    for app in applications()
+        close(app)
+    end
 
 end
