@@ -12,8 +12,6 @@ function conditional_electron_load()
     end
 end
 
-const electronjs_path = conditional_electron_load()
-
 function prep_test_env()
     if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
         if Sys.islinux()
@@ -112,6 +110,8 @@ function generate_pipe_name(name)
 end
 
 function get_electron_binary_cmd()
+    electronjs_path = conditional_electron_load()
+    
     if electronjs_path===nothing
         return "electron"
     elseif Sys.isapple()
