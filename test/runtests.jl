@@ -46,13 +46,13 @@ Electron.prep_test_env()
 
         w3 = Window(Dict("url" => string(URI("file://test.html"))))
 
-        w4 = Window(URI("file://test.html"), options = Dict("title" => "Window title"))
+        w4 = Window(URI("file://test.html"), options=Dict("title" => "Window title"))
 
-        w5 = Window("<body></body>", options = Dict("title" => "Window title"))
+        w5 = Window("<body></body>", options=Dict("title" => "Window title"))
 
         a2 = applications()[1]
 
-        w6 = Window(a2, "<body></body>", options = Dict("title" => "Window title"))
+        w6 = Window(a2, "<body></body>", options=Dict("title" => "Window title"))
 
         w7 = Window(a2)
 
