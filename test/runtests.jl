@@ -32,7 +32,7 @@ Electron.prep_test_env()
         @test length(applications()) == 1
         @test isempty(windows(a))
 
-        w2 = Window(join(@__PATH__, p"test.html"))
+        w2 = Window(joinpath(@__PATH__, p"test.html"))
 
         toggle_devtools(w2)
 
@@ -66,8 +66,8 @@ Electron.prep_test_env()
 
         @test occursin("bar", take!(msgchannel(w7)))
 
-        load(w7, join(@__PATH__, p"test.html"))
-        load(w7, URI(join(@__PATH__, p"test.html")))
+        load(w7, joinpath(@__PATH__, p"test.html"))
+        load(w7, URI(joinpath(@__PATH__, p"test.html")))
 
         close(w7)
 
