@@ -29,7 +29,7 @@ function createWindow(connection, opts) {
     var win_id = win.id
 
     win.webContents.on("did-finish-load", function() {
-        win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }; global['sendMessageToJulia'] = sendMessageToJulia")
+        win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }; global['sendMessageToJulia'] = sendMessageToJulia;undefined")
     })
 
     win.webContents.once("did-finish-load", function() {
