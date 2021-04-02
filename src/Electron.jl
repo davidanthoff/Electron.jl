@@ -23,7 +23,7 @@ function prep_test_env()
     end
 end
 
-const OptDict = Dict{String, Any}
+const OptDict = Dict{String,Any}
 
 struct JSError
     msg
@@ -73,7 +73,7 @@ function Base.show(io::IO, app::Application)
 end
 
 
-const _global_applications = Vector{Application}(undef,0)
+const _global_applications = Vector{Application}(undef, 0)
 const _global_default_application = Ref{Union{Nothing,Application}}(nothing)
 
 function __init__()
@@ -92,7 +92,7 @@ function applications()
 end
 
 function default_application()
-    if _global_default_application[]===nothing || _global_default_application[].exists==false
+    if _global_default_application[] === nothing || _global_default_application[].exists == false
         _global_default_application[] = Application()
     end
 
@@ -112,7 +112,7 @@ function generate_pipe_name(name)
 end
 
 function get_electron_binary_cmd()
-    if electronjs_path===nothing
+    if electronjs_path === nothing
         return "electron"
     elseif Sys.isapple()
         return joinpath(electronjs_path, "Julia.app", "Contents", "MacOS", "Julia")
@@ -134,11 +134,11 @@ function Application()
     electron_path = get_electron_binary_cmd()
     mainjs = joinpath(@__DIR__, "main.js")
 
-    id = replace(string(uuid1()), "-"=>"")
+    id = replace(string(uuid1()), "-" => "")
     main_pipe_name = generate_pipe_name("jlel-$id")
     server = listen(main_pipe_name)
 
-    id = replace(string(uuid1()), "-"=>"")
+    id = replace(string(uuid1()), "-" => "")
     sysnotify_pipe_name = generate_pipe_name("jlel-sn-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
@@ -186,7 +186,7 @@ function Application()
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
-                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
+                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold=true)
                                 Base.showerror(IOContext(io, :limit => true), er, bt)
                                 println(io)
                                 write(stderr, io)
@@ -219,7 +219,7 @@ Terminates the Electron application referenced by `app`.
 """
 function Base.close(app::Application)
     app.exists || error("Cannot close this application, the application does no longer exist.")
-    while length(windows(app))>0
+    while length(windows(app)) > 0
         close(first(windows(app)))
     end
     app.exists = false

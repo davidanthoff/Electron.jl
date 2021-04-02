@@ -94,7 +94,7 @@ Electron.prep_test_env()
     end
 
     for app in applications()
-        close(app)
-    end
+    close(app)
+end
 
 end
