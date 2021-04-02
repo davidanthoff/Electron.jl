@@ -8,6 +8,7 @@ function conditional_electron_load()
     try
         return artifact"electronjs_app"
     catch error
+        @info "Artifact load did NOT work."
         return nothing
     end
 end
