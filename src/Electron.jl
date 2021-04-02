@@ -390,6 +390,8 @@ function Base.close(win::Window)
     return nothing
 end
 
+Base.isopen(win::Window) = win.exists
+
 msgchannel(win::Window) = win.msg_channel
 
 """
