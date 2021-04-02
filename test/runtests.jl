@@ -3,13 +3,19 @@ using URIParser
 using FilePaths
 using Test
 
+@info "Step A"
+
 Electron.prep_test_env()
+
+@info "Step B"
 
 @testset "Electron" begin
 
     @testset "Core" begin
 
         w = Window(URI("file://test.html"))
+
+        @info "Step C"
 
         a = applications()[1]
 
