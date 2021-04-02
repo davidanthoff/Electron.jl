@@ -5,8 +5,8 @@ libc = "glibc"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "8035309d4ff6c9ffa149eb080c40931a0d46714f6bd249b77db266b6f31a21b9"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-x86_64-linux-gnu.tar.gz"
+    sha256 = "d30cacd2953453818268fb1a213ae02c126661d030f053892926d3a97c22320a"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-x86_64-linux-gnu.tar.gz"
 [[electronjs_app]]
 arch = "aarch64"
 git-tree-sha1 = "bf8267793953d41b83f2b9bfb4209fe2547b0e33"
@@ -14,17 +14,18 @@ libc = "glibc"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "7da7f2f74b1c5bfa56a2c818a1739a89967d04e864d2ff058a878bb7875826de"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-aarch64-linux-gnu.tar.gz"
+    sha256 = "e81f2e87555d2d4b7549ba5651d10330d4a451195ad9b5aa14ce17fdc990271c"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-aarch64-linux-gnu.tar.gz"
 [[electronjs_app]]
 arch = "armv7l"
+call_abi = "eabihf"
 git-tree-sha1 = "54c760bb0118f54f54fbf7120d22057dbb179839"
 libc = "glibc"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "03ce1f68c38b20f800da2e270d45e92ffd4ed3ea2451dcbb7b7340d4d79d2200"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-arm-linux-gnueabihf.tar.gz"
+    sha256 = "c248fdd183a220df7037c1f3e4f5e69510f512358c380a01e1eba1d0de55c29c"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-armv7l-linux-gnueabihf.tar.gz"
 [[electronjs_app]]
 arch = "x86_64"
 git-tree-sha1 = "8731693ea495ec92614ea8a5da62f8e66909f0c1"
@@ -32,8 +33,8 @@ libc = "musl"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "5aaaf2e5d77908cb0daac71849c2e9c455d28e0f041257aa16840e8c0d1ae283"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-x86_64-linux-musl.tar.gz"
+    sha256 = "138ba241d1dcd0753f530e4361c7f22dc2fd3cd820e7d5e853bad5419716a9d7"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-x86_64-linux-musl.tar.gz"
 [[electronjs_app]]
 arch = "aarch64"
 git-tree-sha1 = "bf8267793953d41b83f2b9bfb4209fe2547b0e33"
@@ -41,38 +42,39 @@ libc = "musl"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "10c1a7f443d8ab1ec4c4c537d0ed94800093ce43af4f5cb0158ab01f8e2ee633"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-aarch64-linux-musl.tar.gz"
+    sha256 = "bbb26e4e79ec41d9a80a76e69bff2d46f726607bbfdc25d0bfd18c06f6f21839"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-aarch64-linux-musl.tar.gz"
 [[electronjs_app]]
 arch = "armv7l"
+call_abi = "eabihf"
 git-tree-sha1 = "54c760bb0118f54f54fbf7120d22057dbb179839"
 libc = "musl"
 os = "linux"
 
     [[electronjs_app.download]]
-    sha256 = "fe33a650fd5fe60ae2f6bb460f2343adfe6a7bc63c1279e4610ef62bb1a06bb0"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-arm-linux-musleabihf.tar.gz"
+    sha256 = "e25a5b48a7c23cdaed77ee8fab06a96f7843e7653834c426fb3ddc47cca4f754"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-armv7l-linux-musleabihf.tar.gz"
 [[electronjs_app]]
 arch = "x86_64"
 git-tree-sha1 = "3ba739a4ed073587d96415faecef10a5ccea63ba"
 os = "macos"
 
     [[electronjs_app.download]]
-    sha256 = "6a2c6a2f867fbe7abf64d19e68ddd1ea85b46c1d03704e8ad397232b578b87f8"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-x86_64-apple-darwin14.tar.gz"
+    sha256 = "3334ce29e72713d355c07ecb141668d25273d326c2ac0cd1399adc3b583d4151"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-x86_64-apple-darwin14.tar.gz"
 [[electronjs_app]]
 arch = "i686"
-git-tree-sha1 = "06a003964ce44ea8706506c3a067ac3c29b5b2d9"
+git-tree-sha1 = "68dea0b5b5c3eb20ef83ded02f908f8b22e969e6"
 os = "windows"
 
     [[electronjs_app.download]]
-    sha256 = "4b6c51166334a0d7715297f1b9acf57f2acfdd52993d371525a805cd831f80ea"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-i686-w64-mingw32.tar.gz"
+    sha256 = "10856ec797aef63eba22c847637d1cdcb4d00970da745c1e22ce266c38ae1bf5"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-i686-w64-mingw32.tar.gz"
 [[electronjs_app]]
 arch = "x86_64"
-git-tree-sha1 = "aaa4041dbb1e073d9d1491a285929d6ce1b0e46a"
+git-tree-sha1 = "5a1bce5ee5f832396865669b6716cae1a02c235f"
 os = "windows"
 
     [[electronjs_app.download]]
-    sha256 = "df2c968ae76f1c4e37b554157d6a0a8a631da3629d2073eb628209e7b66eaaf5"
-    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B0/ElectronJS-9.1.0+0-x86_64-w64-mingw32.tar.gz"
+    sha256 = "82438f1d02533fd8ccef9bb8b3c86561b67b2ee14ce06ca1fa0b2f87c767e406"
+    url = "https://github.com/davidanthoff/ElectronBuilder/releases/download/v9.1.0%2B1/ElectronJS-9.1.0+1-x86_64-w64-mingw32.tar.gz"
