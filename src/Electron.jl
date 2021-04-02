@@ -12,8 +12,6 @@ function conditional_electron_load()
     end
 end
 
-const electronjs_path = conditional_electron_load()
-
 function prep_test_env()
     if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
         if Sys.islinux()
@@ -112,6 +110,8 @@ function generate_pipe_name(name)
 end
 
 function get_electron_binary_cmd()
+    electronjs_path = conditional_electron_load()
+    
     if electronjs_path===nothing
         return "electron"
     elseif Sys.isapple()
@@ -130,9 +130,8 @@ Start a new Electron application. This will start a new process
 for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 """
-function Application()
+function Application(;mainjs=joinpath(@__DIR__, "main.js"))
     electron_path = get_electron_binary_cmd()
-    mainjs = joinpath(@__DIR__, "main.js")
 
     id = replace(string(uuid1()), "-"=>"")
     main_pipe_name = generate_pipe_name("jlel-$id")
