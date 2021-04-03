@@ -11,7 +11,7 @@ jobs:
       matrix:
         julia-version: ['1.6']
         julia-arch: [x64]
-        os: [ubuntu-latest, windows-latest]
+        os: [windows-latest]
 
     steps:
       - uses: actions/checkout@v2
