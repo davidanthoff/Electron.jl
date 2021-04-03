@@ -112,9 +112,9 @@ function generate_pipe_name(name)
     end
 end
 
-const electronjs_path = conditional_electron_load()
-
 function get_electron_binary_cmd()
+    electronjs_path = conditional_electron_load()
+
     if electronjs_path===nothing
         return "electron"
     elseif Sys.isapple()
