@@ -9,13 +9,17 @@ Electron.prep_test_env()
 
 @info "Step B"
 
+Electron.get_electron_binary_cmd()
+
+@info "step C"
+
 @testset "Electron" begin
 
     @testset "Core" begin
 
         w = Window(URI("file://test.html"))
 
-        @info "Step C"
+        @info "Step D"
 
         a = applications()[1]
 
