@@ -6,7 +6,9 @@ export Application, Window, URI, windows, applications, msgchannel, toggle_devto
 
 function conditional_electron_load()
     try
+        @info "Now trying to load artifacts."
         return artifact"electronjs_app"
+        @info "artifacts were successfully installed"
     catch error
         @info "Artifact load did NOT work."
         return nothing
