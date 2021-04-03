@@ -5,14 +5,14 @@ using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
 function conditional_electron_load()
-    try
+    # try
         @info "Now trying to load artifacts."
         return artifact"electronjs_app"
         @info "artifacts were successfully installed"
-    catch error
-        @info "Artifact load did NOT work."
+    # catch error
+        # @info "Artifact load did NOT work."
         return nothing
-    end
+    # end
 end
 
 function prep_test_env()
