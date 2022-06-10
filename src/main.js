@@ -43,7 +43,7 @@ function createWindow(connection, opts) {
 
 function process_command(connection, cmd) {
     if (cmd.cmd == 'runcode' && cmd.target == 'app') {
-        var retvar;
+        var retval;
         try {
             x = eval(cmd.code)
             retval = {data: x===undefined ? null : x}
