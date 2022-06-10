@@ -9,7 +9,11 @@ Electron.prep_test_env()
 
     @testset "Core" begin
 
-        w = Window(URI("file://test.html"))
+        @test pwd() == @__DIR__
+
+        testpagepath = joinpath(@__PATH__, p"test.html")
+
+        w = Window(URI(testpagepath))
 
         a = applications()[1]
 
@@ -44,9 +48,9 @@ Electron.prep_test_env()
         @test isempty(applications())
         @test isempty(windows(a))
 
-        w3 = Window(Dict("url" => string(URI("file://test.html"))))
+        w3 = Window(Dict("url" => string(URI(testpagepath))))
 
-        w4 = Window(URI("file://test.html"), options=Dict("title" => "Window title"))
+        w4 = Window(URI(testpagepath), options=Dict("title" => "Window title"))
 
         w5 = Window("<body></body>", options=Dict("title" => "Window title"))
 
