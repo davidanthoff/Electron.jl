@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.7', '1.8-nightly', 'nightly']
+        julia-version: ['1.6', '1.7', '1.8-nightly', 'nightly']
         julia-arch: [x64, x86]
         os: [ubuntu-latest, windows-latest, macOS-latest]
         exclude:
