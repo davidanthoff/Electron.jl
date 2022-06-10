@@ -1,5 +1,5 @@
 using Electron
-using URIParser
+using URIs
 using FilePaths
 using Test
 

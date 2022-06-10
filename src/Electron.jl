@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIParser, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
+using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
@@ -111,7 +111,7 @@ end
 
 function get_electron_binary_cmd()
     electronjs_path = conditional_electron_load()
-    
+
     if electronjs_path===nothing
         return "electron"
     elseif Sys.isapple()
@@ -310,7 +310,7 @@ end
 Load `html` in the Electron window `win`.
 """
 load(win::Window, html::AbstractString) =
-    load(win, URI("data:text/html;charset=utf-8," * escape(html)))
+    load(win, URI("data:text/html;charset=utf-8," * escapeuri(html)))
 
 """
     function Window([app::Application,] options::Dict)
@@ -367,7 +367,7 @@ If `app` is not specified, use the default Electron application,
 starting one if needed.
 """
 function Window(app::Application, content::AbstractString; kwargs...)
-    return Window(app, URI("data:text/html;charset=utf-8," * escape(content)); kwargs...)
+    return Window(app, URI("data:text/html;charset=utf-8," * escapeuri(content)); kwargs...)
 end
 
 Window(a1::Application, args...; kwargs...) = throw(MethodError(Window, (a1, args...)))
