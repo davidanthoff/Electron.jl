@@ -44,7 +44,7 @@ This will start a new Electron process that is ready to open windows or run Java
 To create a new window in an existing application, use the ``Window`` constructor:
 
 ````julia
-using Electron, URIParser
+using Electron, URIs
 
 app = Application()
 
@@ -65,7 +65,7 @@ load(win, """
 You can also call the ``Window`` constructor without passing an ``Application``, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) creates a default application for you:
 
 ````julia
-using Electron, URIParser
+using Electron, URIs
 
 win = Window(URI("file://main.html"))
 ````
@@ -73,7 +73,7 @@ win = Window(URI("file://main.html"))
 You can run JavaScript code both in the main or the render thread of a specific window. To run some JavaScript in the main thread, call the ``run`` function and pass an ``Application`` instance as the first argument:
 
 ````julia
-using Electron, URIParser
+using Electron
 
 app = Application()
 
@@ -85,7 +85,7 @@ The second argument of the ``run`` function is JavaScript code that will simply 
 You can also run JavaScript in the render thread of any open window by passing the corresponding ``Window`` instance as the first argument to ``run``:
 
 ````julia
-using Electron, URIParser
+using Electron, URIs
 
 win = Window(URI("file://main.html"))
 
