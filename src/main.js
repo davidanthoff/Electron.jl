@@ -12,11 +12,11 @@ const ipcMain = electron.ipcMain;
 function createWindow(connection, opts) {
     if ('webPreferences' in opts) {
         opts.webPreferences['nodeIntegration'] = true
+        opts.webPreferences['contextIsolation'] = false
     }
     else {
-        opts['webPreferences'] = {nodeIntegration: true};
+        opts['webPreferences'] = {nodeIntegration: true, contextIsolation: false};
     }
-    opts.webPreferences.nodeIntegration = true
     var win = new electron.BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -43,7 +43,7 @@ function createWindow(connection, opts) {
 
 function process_command(connection, cmd) {
     if (cmd.cmd == 'runcode' && cmd.target == 'app') {
-        var retvar;
+        var retval;
         try {
             x = eval(cmd.code)
             retval = {data: x===undefined ? null : x}
