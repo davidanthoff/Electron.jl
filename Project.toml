@@ -1,6 +1,6 @@
 name = "Electron"
 uuid = "a1bb12fb-d4d1-54b4-b10a-ee7951ef7ad3"
-version = "4.0.0"
+version = "4.0.1-DEV"
 
 [deps]
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
