@@ -130,7 +130,7 @@ Start a new Electron application. This will start a new process
 for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 """
-function Application(;mainjs=joinpath(@__DIR__, "main.js"))
+function Application(;mainjs=joinpath(@__DIR__, "main.js"), additional_electron_args = String[])
     electron_path = get_electron_binary_cmd()
 
     id = replace(string(uuid1()), "-"=>"")
@@ -144,7 +144,15 @@ function Application(;mainjs=joinpath(@__DIR__, "main.js"))
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
     # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
-    proc = open(`$electron_path $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
+    electron_cmd = Cmd([
+        electron_path,
+        mainjs,
+        main_pipe_name,
+        sysnotify_pipe_name,
+        secure_cookie_encoded,
+        additional_electron_args...
+    ])
+    proc = open(electron_cmd, "w", stdout)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
