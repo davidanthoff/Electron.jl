@@ -1,9 +1,11 @@
-name: Run CI on master
+name: Run CI on main
 
 on:
   push:
     branches:
+      - main
       - master
+  workflow_dispatch:
 
 jobs:
   test:
