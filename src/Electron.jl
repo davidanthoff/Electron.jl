@@ -152,7 +152,13 @@ function Application(;mainjs=joinpath(@__DIR__, "main.js"), additional_electron_
         secure_cookie_encoded,
         additional_electron_args...
     ])
-    proc = open(electron_cmd, "w", stdout)
+    
+    new_env = copy(ENV)
+    if haskey(new_env, "ELECTRON_RUN_AS_NODE")
+        delete!(new_env, "ELECTRON_RUN_AS_NODE")
+    end
+
+    proc = open(Cmd(electron_cmd, env=new_env), "w", stdout)
 
     sock = accept(server)
     if read!(sock, zero(secure_cookie)) != secure_cookie
