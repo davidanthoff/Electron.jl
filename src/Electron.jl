@@ -21,7 +21,7 @@ function prep_test_env()
     end
 end
 
-const OptDict = Dict{String, Any}
+const OptDict = Dict{String,Any}
 
 struct JSError
     msg
@@ -71,7 +71,7 @@ function Base.show(io::IO, app::Application)
 end
 
 
-const _global_applications = Vector{Application}(undef,0)
+const _global_applications = Vector{Application}(undef, 0)
 const _global_default_application = Ref{Union{Nothing,Application}}(nothing)
 
 function __init__()
@@ -90,7 +90,7 @@ function applications()
 end
 
 function default_application()
-    if _global_default_application[]===nothing || _global_default_application[].exists==false
+    if _global_default_application[] === nothing || _global_default_application[].exists == false
         _global_default_application[] = Application()
     end
 
@@ -112,7 +112,7 @@ end
 function get_electron_binary_cmd()
     electronjs_path = conditional_electron_load()
 
-    if electronjs_path===nothing
+    if electronjs_path === nothing
         return "electron"
     elseif Sys.isapple()
         return joinpath(electronjs_path, "Julia.app", "Contents", "MacOS", "Julia")
@@ -130,14 +130,14 @@ Start a new Electron application. This will start a new process
 for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 """
-function Application(;mainjs=joinpath(@__DIR__, "main.js"), additional_electron_args = String[])
+function Application(; mainjs=joinpath(@__DIR__, "main.js"), additional_electron_args=String[])
     electron_path = get_electron_binary_cmd()
 
-    id = replace(string(uuid1()), "-"=>"")
+    id = replace(string(uuid1()), "-" => "")
     main_pipe_name = generate_pipe_name("jlel-$id")
     server = listen(main_pipe_name)
 
-    id = replace(string(uuid1()), "-"=>"")
+    id = replace(string(uuid1()), "-" => "")
     sysnotify_pipe_name = generate_pipe_name("jlel-sn-$id")
     sysnotify_server = listen(sysnotify_pipe_name)
 
@@ -152,7 +152,7 @@ function Application(;mainjs=joinpath(@__DIR__, "main.js"), additional_electron_
         secure_cookie_encoded,
         additional_electron_args...
     ])
-    
+
     new_env = copy(ENV)
     if haskey(new_env, "ELECTRON_RUN_AS_NODE")
         delete!(new_env, "ELECTRON_RUN_AS_NODE")
@@ -199,7 +199,7 @@ function Application(;mainjs=joinpath(@__DIR__, "main.js"), additional_electron_
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
-                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
+                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold=true)
                                 Base.showerror(IOContext(io, :limit => true), er, bt)
                                 println(io)
                                 write(stderr, io)
@@ -232,7 +232,7 @@ Terminates the Electron application referenced by `app`.
 """
 function Base.close(app::Application)
     app.exists || error("Cannot close this application, the application does no longer exist.")
-    while length(windows(app))>0
+    while length(windows(app)) > 0
         close(first(windows(app)))
     end
     app.exists = false
