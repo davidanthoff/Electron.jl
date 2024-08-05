@@ -1,8 +1,29 @@
 module Electron
 
-using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
+using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePathsBase, UUIDs
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
+
+function URIs.URI(p::AbstractPath; query="", fragment="")
+    if isempty(p.root)
+        throw(ArgumentError("$p is not an absolute path"))
+    end
+
+    b = IOBuffer()
+    print(b, "file://")
+
+    if !isempty(p.drive)
+        print(b, "/")
+        print(b, p.drive)
+    end
+
+    for s in p.segments
+        print(b, "/")
+        print(b, URIs.escapeuri(s))
+    end
+
+    return URIs.URI(URIs.URI(String(take!(b))); query=query, fragment=fragment)
+end
 
 function conditional_electron_load()
     try

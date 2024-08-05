@@ -1,6 +1,6 @@
 using Electron
 using URIs
-using FilePaths
+using FilePathsBase
 using Test
 
 Electron.prep_test_env()
