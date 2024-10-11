@@ -4,3 +4,4 @@
 /deps
 !/deps/build.jl
 .vscode
+Manifest.toml
