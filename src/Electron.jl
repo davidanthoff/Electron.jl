@@ -5,6 +5,7 @@ using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
 
 function conditional_electron_load()
+    
     try
         return artifact"electronjs_app"
     catch error
