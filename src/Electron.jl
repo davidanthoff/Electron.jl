@@ -124,7 +124,7 @@ function get_electron_binary_cmd()
     end
 end
 
-const MAIN_JS = @path joinpath(@__DIR__, "main.js")
+const MAIN_JS = joinpath(@__DIR__, "main.js")
 
 """
     function Application()
