@@ -134,6 +134,7 @@ for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 """
 function Application(; mainjs=String(MAIN_JS), additional_electron_args=String[])
+    @show mainjs typeof(mainjs)
     electron_path = get_electron_binary_cmd()
 
     id = replace(string(uuid1()), "-"=>"")
