@@ -124,7 +124,7 @@ function get_electron_binary_cmd()
     end
 end
 
-const MAIN_JS = joinpath(@__DIR__, "main.js")
+const MAIN_JS = @path joinpath(@__DIR__, "main.js")
 
 """
     function Application()
@@ -135,6 +135,7 @@ can be used in the construction of Electron windows.
 """
 function Application(; mainjs=String(MAIN_JS), additional_electron_args=String[])
     @show mainjs typeof(mainjs)
+    @assert isfile(mainjs)
     electron_path = get_electron_binary_cmd()
 
     id = replace(string(uuid1()), "-"=>"")
