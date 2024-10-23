@@ -135,6 +135,7 @@ can be used in the construction of Electron windows.
 """
 function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_args=String[])
     @assert isfile(mainjs)
+    read(mainjs) # This seems to be required to not hang windows CI?!
     electron_path = get_electron_binary_cmd()
 
     id = replace(string(uuid1()), "-"=>"")
