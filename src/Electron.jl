@@ -151,6 +151,7 @@ function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_arg
     # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
     electron_cmd = Cmd([
         electron_path,
+        "--no-sandbox",
         mainjs,
         main_pipe_name,
         sysnotify_pipe_name,
