@@ -87,6 +87,8 @@ function secure_connect(addr, secure_cookie) {
     return connection;
 }
 
+app.commandLine.appendSwitch('--no-sandbox')
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
