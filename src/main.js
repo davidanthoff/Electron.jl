@@ -91,10 +91,10 @@ function secure_connect(addr, secure_cookie) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 electron.app.on('ready', function () {
-    var secure_cookie = Buffer.from(process.argv[4], 'base64');
+    var secure_cookie = Buffer.from(process.argv[5], 'base64');
 
-    var connection = secure_connect(process.argv[2], secure_cookie)
-    sysnotify_connection = secure_connect(process.argv[3], secure_cookie)
+    var connection = secure_connect(process.argv[3], secure_cookie)
+    sysnotify_connection = secure_connect(process.argv[4], secure_cookie)
 
     connection.on('end', function () {
         sysnotify_connection.write(JSON.stringify({ cmd: "appclosing" }) + '\n')
