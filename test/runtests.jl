@@ -1,6 +1,7 @@
 using Electron
+using Electron: path2uri
 using URIs
-using FilePaths
+using FilePathsBase
 using Test
 
 Electron.prep_test_env()
@@ -13,7 +14,7 @@ Electron.prep_test_env()
 
         testpagepath = joinpath(@__PATH__, p"test.html")
 
-        w = Window(URI(testpagepath))
+        w = Window(path2uri(testpagepath))
 
         a = applications()[1]
 
@@ -48,9 +49,9 @@ Electron.prep_test_env()
         @test isempty(applications())
         @test isempty(windows(a))
 
-        w3 = Window(Dict("url" => string(URI(testpagepath))))
+        w3 = Window(Dict("url" => string(path2uri(testpagepath))))
 
-        w4 = Window(URI(testpagepath), options=Dict("title" => "Window title"))
+        w4 = Window(path2uri(testpagepath), options=Dict("title" => "Window title"))
 
         w5 = Window("<body></body>", options=Dict("title" => "Window title"))
 
@@ -71,7 +72,7 @@ Electron.prep_test_env()
         @test occursin("bar", take!(msgchannel(w7)))
 
         load(w7, joinpath(@__PATH__, p"test.html"))
-        load(w7, URI(joinpath(@__PATH__, p"test.html")))
+        load(w7, path2uri(joinpath(@__PATH__, p"test.html")))
 
         close(w7)
 

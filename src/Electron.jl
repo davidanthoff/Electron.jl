@@ -1,9 +1,30 @@
 module Electron
 
-using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
+using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePathsBase, UUIDs
 using RelocatableFolders
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
+
+function path2uri(p::AbstractPath; query="", fragment="")
+    if isempty(p.root)
+        throw(ArgumentError("$p is not an absolute path"))
+    end
+
+    b = IOBuffer()
+    print(b, "file://")
+
+    if !isempty(p.drive)
+        print(b, "/")
+        print(b, p.drive)
+    end
+
+    for s in p.segments
+        print(b, "/")
+        print(b, URIs.escapeuri(s))
+    end
+
+    return URIs.URI(URIs.URI(String(take!(b))); query=query, fragment=fragment)
+end
 
 function conditional_electron_load()
     try
@@ -319,7 +340,7 @@ Load `path` in the Electron window `win`.
 """
 function load(win::Window, path::AbstractPath)
     win.exists || error("Cannot load path in this window, the window does no longer exist.")
-    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(URI(path)))
+    message = OptDict("cmd" => "loadurl", "winid" => win.id, "url" => string(path2uri(path)))
     req_response(win.app, message)
     return nothing
 end
@@ -374,7 +395,7 @@ If `app` is not specified, use the default Electron application,
 starting one if needed.
 """
 function Window(app::Application, path::AbstractPath; options::Dict=OptDict())
-    return Window(app, URI(path); options=options)
+    return Window(app, path2uri(path); options=options)
 end
 
 """
