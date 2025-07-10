@@ -139,9 +139,6 @@ can be used in the construction of Electron windows.
 - `verbose`: Enable verbose logging output (default: `false`)
 - `additional_electron_args`: Additional command-line arguments to pass to Electron (default: empty)
 
-# Environment Variables
-- `JULIA_ELECTRON_HEADLESS`: Set to "true" to enable headless mode with CI/container compatibility flags
-
 # Note
 For advanced Electron configuration, pass specific flags via `additional_electron_args`.
 For example, to enable remote debugging: `additional_electron_args=["--remote-debugging-port=9222"]`
@@ -174,18 +171,6 @@ function Application(;
     # Add --no-sandbox flag if sandbox is disabled (default: disabled for compatibility with Ubuntu and remote SSH)
     if !sandbox
         push!(electron_cmd_args, "--no-sandbox")
-    end
-
-    # Check for headless mode via environment variable
-    headless = Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false)
-    if headless
-        push!(electron_cmd_args, "--disable-gpu")
-        push!(electron_cmd_args, "--disable-gpu-sandbox")
-        push!(electron_cmd_args, "--disable-dev-shm-usage")
-        push!(electron_cmd_args, "--disable-setuid-sandbox")
-        # Only add --no-zygote if sandbox is disabled (--no-sandbox is present)
-        !sandbox && push!(electron_cmd_args, "--no-zygote")
-        push!(electron_cmd_args, "--disable-features=VizDisplayCompositor")
     end
 
     # Add verbose logging flags

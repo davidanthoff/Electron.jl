@@ -99,9 +99,13 @@ Electron.prep_test_env()
         close(a2)
 
         # Test explicit sandbox=true
-        a3 = Application(sandbox=true, verbose=true)
-        @test isa(a3, Electron.Application)
-        close(a3)
+        # Skip this test on Linux when JULIA_ELECTRON_HEADLESS is true because
+        # CI containers don't support proper sandboxing
+        if !(Sys.islinux() && Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false))
+            a3 = Application(sandbox=true, verbose=true)
+            @test isa(a3, Electron.Application)
+            close(a3)
+        end
 
         # Test with additional electron args
         a4 = Application(additional_electron_args=["--disable-gpu"])
