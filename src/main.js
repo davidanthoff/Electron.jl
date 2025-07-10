@@ -91,26 +91,38 @@ function secure_connect(addr, secure_cookie) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 electron.app.on('ready', function () {
-    // Find the main.js file in argv to determine the correct argument positions
+    // Arguments structure: electron.exe [flags...] main.js main_pipe_name sysnotify_pipe_name secure_cookie_encoded [additional_args...]
+    // We know the required args are always: main.js, main_pipe_name, sysnotify_pipe_name, secure_cookie_encoded
+    // So we find main.js and take the next 3 arguments
+
     var mainjs_index = -1;
     for (var i = 1; i < process.argv.length; i++) {
-        if (process.argv[i].endsWith('.js')) {
+        if (process.argv[i].endsWith('main.js')) {
             mainjs_index = i;
             break;
         }
     }
-    
+
     if (mainjs_index === -1) {
-        console.error('Could not find main.js in process arguments');
+        // Fallback: look for any .js file that might be the main script
+        for (var i = 1; i < process.argv.length; i++) {
+            if (process.argv[i].endsWith('.js')) {
+                mainjs_index = i;
+                break;
+            }
+        }
+    }
+
+    if (mainjs_index === -1 || mainjs_index + 3 >= process.argv.length) {
+        console.error('Could not find required arguments');
+        console.error('Arguments:', process.argv);
         process.exit(1);
     }
-    
-    // Arguments are positioned relative to the main.js file:
-    // [electron_path, (optional flags), mainjs, main_pipe_name, sysnotify_pipe_name, secure_cookie_encoded, ...]
+
     var main_pipe_name = process.argv[mainjs_index + 1];
     var sysnotify_pipe_name = process.argv[mainjs_index + 2];
     var secure_cookie_encoded = process.argv[mainjs_index + 3];
-    
+
     var secure_cookie = Buffer.from(secure_cookie_encoded, 'base64');
 
     var connection = secure_connect(main_pipe_name, secure_cookie)

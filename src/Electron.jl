@@ -137,16 +137,21 @@ can be used in the construction of Electron windows.
 - `mainjs`: Path to the main JavaScript file for the Electron app
 - `additional_electron_args`: Additional command-line arguments to pass to Electron
 - `sandbox`: Whether to enable Electron's sandbox (default: `false`). Set to `true` for enhanced security when possible.
+- `headless`: Enable headless mode with additional compatibility flags for CI/containers (default: `false`, or `true` if `JULIA_ELECTRON_HEADLESS=true`)
 - `enable_logging`: Enable Electron's internal logging (default: `false`)
 - `log_level`: Set logging level - "info", "warning", "error", or "fatal" (default: `"info"`)
 - `enable_remote_debugging`: Enable remote debugging on port 9222 (default: `false`)
 - `disable_gpu`: Disable GPU acceleration (useful for headless environments) (default: `false`)
 - `verbose`: Enable verbose logging output (default: `false`)
+
+# Environment Variables
+- `JULIA_ELECTRON_HEADLESS`: Set to "true" to enable headless mode by default (useful for CI)
 """
-function Application(; 
-    mainjs=normpath(String(MAIN_JS)), 
-    additional_electron_args=String[], 
+function Application(;
+    mainjs=normpath(String(MAIN_JS)),
+    additional_electron_args=String[],
     sandbox::Bool=false,
+    headless::Bool=Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false),
     enable_logging::Bool=false,
     log_level::String="info",
     enable_remote_debugging::Bool=false,
@@ -168,44 +173,57 @@ function Application(;
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
     # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
-    
+
     # Build command arguments, placing flags before the main.js file
     electron_cmd_args = [electron_path]
-    
+
     # Add --no-sandbox flag if sandbox is disabled (default: disabled for compatibility with Ubuntu and remote SSH)
     if !sandbox
         push!(electron_cmd_args, "--no-sandbox")
     end
-    
+
+    # GPU settings
+    if disable_gpu
+        push!(electron_cmd_args, "--disable-gpu")
+    end
+
+    # Headless mode: add flags necessary for CI/container environments
+    if headless
+        push!(electron_cmd_args, "--disable-gpu")
+        push!(electron_cmd_args, "--disable-gpu-sandbox")
+        push!(electron_cmd_args, "--disable-dev-shm-usage")
+        push!(electron_cmd_args, "--disable-setuid-sandbox")
+        push!(electron_cmd_args, "--no-zygote")
+        push!(electron_cmd_args, "--disable-features=VizDisplayCompositor")
+    end
+
     # Add debugging and verbose flags
     if enable_logging
         push!(electron_cmd_args, "--enable-logging")
         push!(electron_cmd_args, "--log-level=$log_level")
     end
-    
+
     if enable_remote_debugging
         push!(electron_cmd_args, "--remote-debugging-port=9222")
     end
-    
-    if disable_gpu
-        push!(electron_cmd_args, "--disable-gpu")
-    end
-    
+
     if verbose
         push!(electron_cmd_args, "--verbose")
         push!(electron_cmd_args, "--enable-logging")
         push!(electron_cmd_args, "--log-level=info")
     end
-    
+
     # Add the main script and its arguments
     append!(electron_cmd_args, [
         mainjs,
         main_pipe_name,
         sysnotify_pipe_name,
-        secure_cookie_encoded,
-        additional_electron_args...
+        secure_cookie_encoded
     ])
-    
+
+    # Add additional electron args at the end
+    append!(electron_cmd_args, additional_electron_args)
+
     electron_cmd = Cmd(electron_cmd_args)
 
     new_env = copy(ENV)
