@@ -84,7 +84,7 @@ Electron.prep_test_env()
     end # testset "Core"
 
     @testset "Application options" begin
-        # Test that sandbox parameter works
+        # Test that Application constructor works with the rationalized interface
         # Note: We can't easily test the actual command line flags without deeper introspection,
         # but we can verify the Application constructor accepts the parameters
 
@@ -102,6 +102,17 @@ Electron.prep_test_env()
         a3 = Application(sandbox=true, verbose=true)
         @test isa(a3, Electron.Application)
         close(a3)
+
+        # Test with additional electron args
+        a4 = Application(additional_electron_args=["--disable-gpu"])
+        @test isa(a4, Electron.Application)
+        close(a4)
+
+        # Test with custom main.js (using the default one)
+        a5 = Application(mainjs=normpath(String(Electron.MAIN_JS)))
+        @test isa(a5, Electron.Application)
+        close(a5)
+
     end
 
     @testset "ElectronAPI" begin

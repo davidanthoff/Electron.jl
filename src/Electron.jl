@@ -134,28 +134,22 @@ for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
 
 # Arguments
-- `mainjs`: Path to the main JavaScript file for the Electron app
-- `additional_electron_args`: Additional command-line arguments to pass to Electron
+- `mainjs`: Path to the main JavaScript file for the Electron app (default: built-in main.js)
 - `sandbox`: Whether to enable Electron's sandbox (default: `false`). Set to `true` for enhanced security when possible.
-- `headless`: Enable headless mode with additional compatibility flags for CI/containers (default: `false`, or `true` if `JULIA_ELECTRON_HEADLESS=true`)
-- `enable_logging`: Enable Electron's internal logging (default: `false`)
-- `log_level`: Set logging level - "info", "warning", "error", or "fatal" (default: `"info"`)
-- `enable_remote_debugging`: Enable remote debugging on port 9222 (default: `false`)
-- `disable_gpu`: Disable GPU acceleration (useful for headless environments) (default: `false`)
 - `verbose`: Enable verbose logging output (default: `false`)
+- `additional_electron_args`: Additional command-line arguments to pass to Electron (default: empty)
 
 # Environment Variables
-- `JULIA_ELECTRON_HEADLESS`: Set to "true" to enable headless mode by default (useful for CI)
+- `JULIA_ELECTRON_HEADLESS`: Set to "true" to enable headless mode with CI/container compatibility flags
+
+# Note
+For advanced Electron configuration, pass specific flags via `additional_electron_args`.
+For example, to enable remote debugging: `additional_electron_args=["--remote-debugging-port=9222"]`
 """
 function Application(;
     mainjs=normpath(String(MAIN_JS)),
     additional_electron_args=String[],
     sandbox::Bool=false,
-    headless::Bool=Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false),
-    enable_logging::Bool=false,
-    log_level::String="info",
-    enable_remote_debugging::Bool=false,
-    disable_gpu::Bool=false,
     verbose::Bool=false
 )
     @assert isfile(mainjs)
@@ -182,12 +176,8 @@ function Application(;
         push!(electron_cmd_args, "--no-sandbox")
     end
 
-    # GPU settings
-    if disable_gpu
-        push!(electron_cmd_args, "--disable-gpu")
-    end
-
-    # Headless mode: add flags necessary for CI/container environments
+    # Check for headless mode via environment variable
+    headless = Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false)
     if headless
         push!(electron_cmd_args, "--disable-gpu")
         push!(electron_cmd_args, "--disable-gpu-sandbox")
@@ -198,16 +188,7 @@ function Application(;
         push!(electron_cmd_args, "--disable-features=VizDisplayCompositor")
     end
 
-    # Add debugging and verbose flags
-    if enable_logging
-        push!(electron_cmd_args, "--enable-logging")
-        push!(electron_cmd_args, "--log-level=$log_level")
-    end
-
-    if enable_remote_debugging
-        push!(electron_cmd_args, "--remote-debugging-port=9222")
-    end
-
+    # Add verbose logging flags
     if verbose
         push!(electron_cmd_args, "--verbose")
         push!(electron_cmd_args, "--enable-logging")
