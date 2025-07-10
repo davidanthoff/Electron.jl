@@ -86,20 +86,20 @@ Electron.prep_test_env()
     @testset "Application options" begin
         # Test that sandbox parameter works
         # Note: We can't easily test the actual command line flags without deeper introspection,
-        # but we can verify the Application constructor accepts the parameter
-        
+        # but we can verify the Application constructor accepts the parameters
+
         # Test default behavior (sandbox=false by default)
         a1 = Application()
         @test isa(a1, Electron.Application)
         close(a1)
-        
+
         # Test explicit sandbox=false
         a2 = Application(sandbox=false)
         @test isa(a2, Electron.Application)
         close(a2)
-        
-        # Test explicit sandbox=true  
-        a3 = Application(sandbox=true)
+
+        # Test explicit sandbox=true
+        a3 = Application(sandbox=true, verbose=true)
         @test isa(a3, Electron.Application)
         close(a3)
     end
