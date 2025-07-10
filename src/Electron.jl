@@ -137,8 +137,22 @@ can be used in the construction of Electron windows.
 - `mainjs`: Path to the main JavaScript file for the Electron app
 - `additional_electron_args`: Additional command-line arguments to pass to Electron
 - `sandbox`: Whether to enable Electron's sandbox (default: `false`). Set to `true` for enhanced security when possible.
+- `enable_logging`: Enable Electron's internal logging (default: `false`)
+- `log_level`: Set logging level - "info", "warning", "error", or "fatal" (default: `"info"`)
+- `enable_remote_debugging`: Enable remote debugging on port 9222 (default: `false`)
+- `disable_gpu`: Disable GPU acceleration (useful for headless environments) (default: `false`)
+- `verbose`: Enable verbose logging output (default: `false`)
 """
-function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_args=String[], sandbox::Bool=false)
+function Application(; 
+    mainjs=normpath(String(MAIN_JS)), 
+    additional_electron_args=String[], 
+    sandbox::Bool=false,
+    enable_logging::Bool=false,
+    log_level::String="info",
+    enable_remote_debugging::Bool=false,
+    disable_gpu::Bool=false,
+    verbose::Bool=false
+)
     @assert isfile(mainjs)
     read(mainjs) # This seems to be required to not hang windows CI?!
     electron_path = get_electron_binary_cmd()
@@ -161,6 +175,26 @@ function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_arg
     # Add --no-sandbox flag if sandbox is disabled (default: disabled for compatibility with Ubuntu and remote SSH)
     if !sandbox
         push!(electron_cmd_args, "--no-sandbox")
+    end
+    
+    # Add debugging and verbose flags
+    if enable_logging
+        push!(electron_cmd_args, "--enable-logging")
+        push!(electron_cmd_args, "--log-level=$log_level")
+    end
+    
+    if enable_remote_debugging
+        push!(electron_cmd_args, "--remote-debugging-port=9222")
+    end
+    
+    if disable_gpu
+        push!(electron_cmd_args, "--disable-gpu")
+    end
+    
+    if verbose
+        push!(electron_cmd_args, "--verbose")
+        push!(electron_cmd_args, "--enable-logging")
+        push!(electron_cmd_args, "--log-level=info")
     end
     
     # Add the main script and its arguments
