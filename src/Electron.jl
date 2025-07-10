@@ -193,7 +193,8 @@ function Application(;
         push!(electron_cmd_args, "--disable-gpu-sandbox")
         push!(electron_cmd_args, "--disable-dev-shm-usage")
         push!(electron_cmd_args, "--disable-setuid-sandbox")
-        push!(electron_cmd_args, "--no-zygote")
+        # Only add --no-zygote if sandbox is disabled (--no-sandbox is present)
+        !sandbox && push!(electron_cmd_args, "--no-zygote")
         push!(electron_cmd_args, "--disable-features=VizDisplayCompositor")
     end
 
