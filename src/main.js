@@ -91,10 +91,30 @@ function secure_connect(addr, secure_cookie) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 electron.app.on('ready', function () {
-    var secure_cookie = Buffer.from(process.argv[5], 'base64');
+    // Find the main.js file in argv to determine the correct argument positions
+    var mainjs_index = -1;
+    for (var i = 1; i < process.argv.length; i++) {
+        if (process.argv[i].endsWith('.js')) {
+            mainjs_index = i;
+            break;
+        }
+    }
+    
+    if (mainjs_index === -1) {
+        console.error('Could not find main.js in process arguments');
+        process.exit(1);
+    }
+    
+    // Arguments are positioned relative to the main.js file:
+    // [electron_path, (optional flags), mainjs, main_pipe_name, sysnotify_pipe_name, secure_cookie_encoded, ...]
+    var main_pipe_name = process.argv[mainjs_index + 1];
+    var sysnotify_pipe_name = process.argv[mainjs_index + 2];
+    var secure_cookie_encoded = process.argv[mainjs_index + 3];
+    
+    var secure_cookie = Buffer.from(secure_cookie_encoded, 'base64');
 
-    var connection = secure_connect(process.argv[3], secure_cookie)
-    sysnotify_connection = secure_connect(process.argv[4], secure_cookie)
+    var connection = secure_connect(main_pipe_name, secure_cookie)
+    sysnotify_connection = secure_connect(sysnotify_pipe_name, secure_cookie)
 
     connection.on('end', function () {
         sysnotify_connection.write(JSON.stringify({ cmd: "appclosing" }) + '\n')
