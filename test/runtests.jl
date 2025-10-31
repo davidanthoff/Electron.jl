@@ -83,6 +83,49 @@ Electron.prep_test_env()
 
     end # testset "Core"
 
+    @testset "Application options" begin
+        # Test that Application constructor works with the rationalized interface
+        # Note: We can't easily test the actual command line flags without deeper introspection,
+        # but we can verify the Application constructor accepts the parameters
+
+        # Test default behavior (sandbox=false by default)
+        a1 = Application()
+        @test isa(a1, Electron.Application)
+        close(a1)
+
+        # Test explicit sandbox=false
+        a2 = Application(sandbox=false)
+        @test isa(a2, Electron.Application)
+        close(a2)
+
+        # Test explicit sandbox=true
+        # Skip this test on Linux when JULIA_ELECTRON_HEADLESS is true because of this error:
+        # ---
+        # [2528:0710/174822.432243:FATAL:zygote_host_impl_linux.cc(128)] No usable sandbox! If you are running on
+        # Ubuntu 23.10+ or another Linux distro that has disabled unprivileged user namespaces with AppArmor,
+        # see https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md.
+        # Otherwise see https://chromium.googlesource.com/chromium/src/+/main/docs/linux/suid_sandbox_development.md for
+        # more information on developing with the (older) SUID sandbox. If you want to live dangerously and need an
+        # immediate workaround, you can try using --no-sandbox.
+        # ---
+        if !(Sys.islinux() && Base.get_bool_env("JULIA_ELECTRON_HEADLESS", false))
+            a3 = Application(sandbox=true, verbose=true)
+            @test isa(a3, Electron.Application)
+            close(a3)
+        end
+
+        # Test with additional electron args
+        a4 = Application(additional_electron_args=["--disable-gpu"])
+        @test isa(a4, Electron.Application)
+        close(a4)
+
+        # Test with custom main.js (using the default one)
+        a5 = Application(mainjs=normpath(String(Electron.MAIN_JS)))
+        @test isa(a5, Electron.Application)
+        close(a5)
+
+    end
+
     @testset "ElectronAPI" begin
         win = Window()
 

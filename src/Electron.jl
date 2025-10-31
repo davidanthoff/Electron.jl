@@ -132,8 +132,23 @@ const MAIN_JS = @path joinpath(@__DIR__, "main.js")
 Start a new Electron application. This will start a new process
 for that Electron app and return an instance of `Application` that
 can be used in the construction of Electron windows.
+
+# Arguments
+- `mainjs`: Path to the main JavaScript file for the Electron app (default: built-in main.js)
+- `sandbox`: Whether to enable Electron's sandbox (default: `false`). Set to `true` for enhanced security when possible.
+- `verbose`: Enable verbose logging output (default: `false`)
+- `additional_electron_args`: Additional command-line arguments to pass to Electron (default: empty)
+
+# Note
+For advanced Electron configuration, pass specific flags via `additional_electron_args`.
+For example, to enable remote debugging: `additional_electron_args=["--remote-debugging-port=9222"]`
 """
-function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_args=String[])
+function Application(;
+    mainjs=normpath(String(MAIN_JS)),
+    additional_electron_args=String[],
+    sandbox::Bool=false,
+    verbose::Bool=false
+)
     @assert isfile(mainjs)
     read(mainjs) # This seems to be required to not hang windows CI?!
     electron_path = get_electron_binary_cmd()
@@ -149,15 +164,34 @@ function Application(; mainjs=normpath(String(MAIN_JS)), additional_electron_arg
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
     # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
-    electron_cmd = Cmd([
-        electron_path,
-        "--no-sandbox",
+
+    # Build command arguments, placing flags before the main.js file
+    electron_cmd_args = [electron_path]
+
+    # Add --no-sandbox flag if sandbox is disabled (default: disabled for compatibility with Ubuntu and remote SSH)
+    if !sandbox
+        push!(electron_cmd_args, "--no-sandbox")
+    end
+
+    # Add verbose logging flags
+    if verbose
+        push!(electron_cmd_args, "--verbose")
+        push!(electron_cmd_args, "--enable-logging")
+        push!(electron_cmd_args, "--log-level=info")
+    end
+
+    # Add the main script and its arguments
+    append!(electron_cmd_args, [
         mainjs,
         main_pipe_name,
         sysnotify_pipe_name,
-        secure_cookie_encoded,
-        additional_electron_args...
+        secure_cookie_encoded
     ])
+
+    # Add additional electron args at the end
+    append!(electron_cmd_args, additional_electron_args)
+
+    electron_cmd = Cmd(electron_cmd_args)
 
     new_env = copy(ENV)
     if haskey(new_env, "ELECTRON_RUN_AS_NODE")
