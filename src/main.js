@@ -10,13 +10,7 @@ const app = electron.app;
 const ipcMain = electron.ipcMain;
 
 function createWindow(connection, opts) {
-    if ('webPreferences' in opts) {
-        opts.webPreferences['nodeIntegration'] = true
-        opts.webPreferences['contextIsolation'] = false
-    }
-    else {
-        opts['webPreferences'] = {nodeIntegration: true, contextIsolation: false};
-    }
+    opts.webPreferences = { nodeIntegration: true, contextIsolation: false, ...opts.webPreferences }
     var win = new electron.BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -29,7 +23,18 @@ function createWindow(connection, opts) {
     var win_id = win.id
 
     win.webContents.on("did-finish-load", function() {
-        win.webContents.executeJavaScript("const {ipcRenderer} = require('electron'); function sendMessageToJulia(message) { ipcRenderer.send('msg-for-julia-process', message); }; global['sendMessageToJulia'] = sendMessageToJulia;undefined")
+        win.webContents.executeJavaScript(
+            `if (typeof require !== 'undefined') {
+                const {ipcRenderer} = require('electron');
+                function sendMessageToJulia(message) {
+                    ipcRenderer.send('msg-for-julia-process', message)
+                };
+                global['sendMessageToJulia'] = sendMessageToJulia
+            } else {
+                console.info("Electron.jl: ipcRenderer is not available to send messages to the julia backend.");
+            };
+            undefined`
+        )
     })
 
     win.webContents.once("did-finish-load", function() {
