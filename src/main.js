@@ -96,9 +96,11 @@ function secure_connect(addr, secure_cookie) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 electron.app.on('ready', function () {
-    // Arguments structure: electron.exe [flags...] main.js main_pipe_name sysnotify_pipe_name secure_cookie_encoded [additional_args...]
-    // We know the required args are always: main.js, main_pipe_name, sysnotify_pipe_name, secure_cookie_encoded
-    // So we find main.js and take the next 3 arguments
+    // Arguments structure: electron.exe [flags...] main.js main_pipe_name sysnotify_pipe_name [additional_args...]
+    // We know the required args are always: main.js, main_pipe_name, sysnotify_pipe_name
+    // So we find main.js and take the next 2 arguments.
+    // The secure cookie is NOT passed on the command line (it would be visible in the
+    // process table); it arrives in the environment instead, see below.
 
     var mainjs_index = -1;
     for (var i = 1; i < process.argv.length; i++) {
@@ -118,7 +120,7 @@ electron.app.on('ready', function () {
         }
     }
 
-    if (mainjs_index === -1 || mainjs_index + 3 >= process.argv.length) {
+    if (mainjs_index === -1 || mainjs_index + 2 >= process.argv.length) {
         console.error('Could not find required arguments');
         console.error('Arguments:', process.argv);
         process.exit(1);
@@ -126,7 +128,18 @@ electron.app.on('ready', function () {
 
     var main_pipe_name = process.argv[mainjs_index + 1];
     var sysnotify_pipe_name = process.argv[mainjs_index + 2];
-    var secure_cookie_encoded = process.argv[mainjs_index + 3];
+
+    // Must be kept in sync with `SECURE_COOKIE_ENV_VAR` in Electron.jl. The variable is
+    // removed from the environment immediately so that it does not leak into any child
+    // process that Electron itself spawns (renderers, GPU process, ...).
+    var SECURE_COOKIE_ENV_VAR = 'JULIA_ELECTRON_SECURE_COOKIE';
+    var secure_cookie_encoded = process.env[SECURE_COOKIE_ENV_VAR];
+    delete process.env[SECURE_COOKIE_ENV_VAR];
+
+    if (!secure_cookie_encoded) {
+        console.error('The ' + SECURE_COOKIE_ENV_VAR + ' environment variable is not set.');
+        process.exit(1);
+    }
 
     var secure_cookie = Buffer.from(secure_cookie_encoded, 'base64');
 

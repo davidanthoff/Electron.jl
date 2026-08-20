@@ -71,9 +71,12 @@ mutable struct Window
     id::Int64
     exists::Bool
     msg_channel::Channel{Any}
+    # Temporary HTML files that were created for this window (see `_html_url`). They are
+    # deleted when the window is closed or when the application goes away.
+    tmp_html_files::Vector{String}
 
     global function _Window(app::_Application{Window}, id::Int64; msg_channel_size=128) # internal constructor
-        new_window = new(app, id, true, Channel{Any}(msg_channel_size))
+        new_window = new(app, id, true, Channel{Any}(msg_channel_size), String[])
         push!(app.windows, new_window)
         return new_window
     end
@@ -231,6 +234,12 @@ function _accept_or_fail(server, proc, mainjs, timeout)
 end
 
 """
+Name of the environment variable through which the base64 encoded secure cookie is handed
+to the Electron process. Must be kept in sync with `main.js`.
+"""
+const SECURE_COOKIE_ENV_VAR = "JULIA_ELECTRON_SECURE_COOKIE"
+
+"""
     function Application()
 
 Start a new Electron application. This will start a new process
@@ -271,7 +280,7 @@ function Application(;
 
     secure_cookie = rand(UInt8, 128)
     secure_cookie_encoded = base64encode(secure_cookie)
-    # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name $secure_cookie_encoded`, "w", stdout)
+    # proc = open(`$electron_path --inspect-brk=5858 $mainjs $main_pipe_name $sysnotify_pipe_name`, "w", stdout)
 
     # Build command arguments, placing flags before the main.js file
     electron_cmd_args = [electron_path]
@@ -289,11 +298,13 @@ function Application(;
     end
 
     # Add the main script and its arguments
+    # Note: the secure cookie is deliberately NOT passed on the command line, because
+    # command lines are visible to other users in the process table. It is handed to the
+    # child process via the environment instead (see `new_env` below).
     append!(electron_cmd_args, [
         mainjs,
         main_pipe_name,
-        sysnotify_pipe_name,
-        secure_cookie_encoded
+        sysnotify_pipe_name
     ])
 
     # Add additional electron args at the end
@@ -305,6 +316,10 @@ function Application(;
     if haskey(new_env, "ELECTRON_RUN_AS_NODE")
         delete!(new_env, "ELECTRON_RUN_AS_NODE")
     end
+    # The secure cookie travels in the (private) environment of the child process rather
+    # than on its command line. main.js deletes it from `process.env` right after reading
+    # it, so it is not inherited by anything Electron itself spawns.
+    new_env[SECURE_COOKIE_ENV_VAR] = secure_cookie_encoded
 
     proc = open(Cmd(electron_cmd, env=new_env), "w", stdout)
 
@@ -351,6 +366,7 @@ function Application(;
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
                                     app.windows[win_index].exists = false
                                     close(app.windows[win_index].msg_channel)
+                                    _cleanup_tmp_html_files(app.windows[win_index])
                                     deleteat!(app.windows, win_index)
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
@@ -371,6 +387,7 @@ function Application(;
                         # Cleanup all the windows that are associated with this application
                         for w in app.windows
                             w.exists = false
+                            _cleanup_tmp_html_files(w)
                         end
                         empty!(app.windows)
                     end
@@ -559,12 +576,81 @@ function load(win::Window, path::AbstractPath)
 end
 
 """
+Maximum size (in bytes) of an HTML string that is passed to Electron as a `data:` URI.
+
+Chromium refuses to navigate to overly long URLs (its limit is on the order of a couple of
+megabytes, and it is neither documented nor stable across versions); the navigation then
+silently never finishes, which leaves the Julia side waiting forever for `did-finish-load`.
+`escapeuri` additionally inflates the payload by up to a factor of three, so the URL that is
+actually handed to Chromium can be much larger than the HTML itself.
+
+64 KiB of HTML is therefore a deliberately conservative cut-off: even in the worst case it
+produces a URL of well under 200 KB, which is far below anything Chromium is unhappy about,
+while still keeping the cheap in-memory `data:` path for the overwhelming majority of uses
+(small snippets, `"<body></body>"`-style test pages, ...). Everything above that is written
+to a temporary file and loaded via a `file://` URL, which has no size limit.
+"""
+const MAX_DATA_URI_HTML_SIZE = 64 * 1024
+
+# Write `html` to a temporary file and return its path. The caller is responsible for
+# registering the path with a `Window` so that it gets deleted again on teardown.
+function _write_temp_html(html::AbstractString)
+    path = string(tempname(), ".html")
+    open(path, "w") do io
+        write(io, html)
+    end
+    return path
+end
+
+# Delete temporary files, never throwing. On Windows the Electron process may still hold a
+# recently loaded file open for a moment, so failures are retried in the background.
+function _delete_tmp_files(paths::AbstractVector{<:AbstractString})
+    isempty(paths) && return nothing
+    remaining = String[]
+    for p in paths
+        try
+            rm(p, force=true)
+        catch
+            push!(remaining, p)
+        end
+    end
+    if !isempty(remaining)
+        @async begin
+            for _ in 1:50
+                sleep(0.2)
+                all(p -> (try rm(p, force=true); true catch; false end), remaining) && break
+            end
+        end
+    end
+    return nothing
+end
+
+_cleanup_tmp_html_files(win::Window) = (_delete_tmp_files(win.tmp_html_files); empty!(win.tmp_html_files); nothing)
+
+"""
     load(win::Window, html::AbstractString)
 
 Load `html` in the Electron window `win`.
 """
-load(win::Window, html::AbstractString) =
-    load(win, URI("data:text/html;charset=utf-8," * escapeuri(html)))
+function load(win::Window, html::AbstractString)
+    if sizeof(html) <= MAX_DATA_URI_HTML_SIZE
+        return load(win, URI("data:text/html;charset=utf-8," * escapeuri(html)))
+    end
+    win.exists || error("Cannot load HTML in this window, the window does no longer exist.")
+    path = _write_temp_html(html)
+    previous = copy(win.tmp_html_files)
+    push!(win.tmp_html_files, path)
+    try
+        load(win, Path(path))
+    finally
+        # The previously displayed temporary page has been navigated away from, so its
+        # backing file can go. Anything that could not be deleted right away stays
+        # registered on the window and is retried at teardown.
+        _delete_tmp_files(previous)
+        filter!(isfile, win.tmp_html_files)
+    end
+    return nothing
+end
 
 """
     function Window([app::Application,] options::Dict)
@@ -621,6 +707,19 @@ If `app` is not specified, use the default Electron application,
 starting one if needed.
 """
 function Window(app::Application, content::AbstractString; kwargs...)
+    # See `MAX_DATA_URI_HTML_SIZE`: large payloads cannot be passed as a `data:` URI.
+    if sizeof(content) > MAX_DATA_URI_HTML_SIZE
+        path = _write_temp_html(content)
+        local win
+        try
+            win = Window(app, Path(path); kwargs...)
+        catch
+            _delete_tmp_files([path])
+            rethrow()
+        end
+        push!(win.tmp_html_files, path)
+        return win
+    end
     return Window(app, URI("data:text/html;charset=utf-8," * escapeuri(content)); kwargs...)
 end
 
@@ -640,6 +739,10 @@ function Base.close(win::Window)
     win.exists || error("Cannot close this window, the window does no longer exist.")
     message = OptDict("cmd" => "closewindow", "winid" => win.id)
     req_response(win.app, message)
+    # The window is gone at this point, so any temporary HTML file we created for it can be
+    # removed. (The removal from `app.windows` happens asynchronously, and the sysnotify
+    # handler cleans up as well, so this is safe to do twice.)
+    _cleanup_tmp_html_files(win)
     return nothing
 end
 
