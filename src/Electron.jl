@@ -3,7 +3,8 @@ module Electron
 using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
 using RelocatableFolders
 
-export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
+export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI,
+    ApplicationClosedError
 
 function conditional_electron_load()
     try
@@ -29,15 +30,37 @@ struct JSError
 end
 Base.showerror(io::IO, e::JSError) = print(io, "JSError: ", e.msg)
 
+"""
+    ApplicationClosedError
+
+Thrown when a request cannot be completed because the Electron application it was
+addressed to has exited, or its connection to Julia was lost.
+"""
+struct ApplicationClosedError <: Exception
+    msg::String
+end
+ApplicationClosedError() = ApplicationClosedError("The Electron application has exited.")
+Base.showerror(io::IO, e::ApplicationClosedError) = print(io, e.msg)
+
+# A single request that is handed to the task owning the connection to Electron,
+# together with the channel on which its caller waits for the reply.
+const _Request = Tuple{String,Channel{Any}}
+
 mutable struct _Application{T} # forward declaration of Application
     connection::IO
     proc
     secure_cookie::Vector{UInt8}
     windows::Vector{T}
     exists::Bool
+    # All communication over `connection` goes through this channel: callers put
+    # requests on it, and one dedicated task (see `_start_connection_task!`) is the
+    # only thing that ever reads from or writes to `connection`. The IPC protocol is
+    # a strictly ordered sequence of request/response pairs, so this serialization is
+    # what makes Electron.jl safe to use from several tasks at once.
+    req_channel::Channel{_Request}
 
     global function _Application(::Type{T}, connection::IO, proc, secure_cookie) where {T} # internal constructor
-        new_app = new{T}(connection, proc, secure_cookie, T[], true)
+        new_app = new{T}(connection, proc, secure_cookie, T[], true, Channel{_Request}(Inf))
         push!(_global_applications, new_app)
         return new_app
     end
@@ -126,6 +149,87 @@ end
 
 const MAIN_JS = @path joinpath(@__DIR__, "main.js")
 
+# How long we are willing to wait for the Electron process to connect back to us
+# before we give up. This is only a backstop against a process that is alive but
+# never connects: a process that dies is detected immediately. It is deliberately
+# generous, because Electron startup can be slow on loaded CI machines.
+const DEFAULT_STARTUP_TIMEOUT = 120.0
+
+function _electron_startup_error(proc, mainjs)
+    exit_code = try
+        proc.exitcode
+    catch
+        nothing
+    end
+    return ErrorException(string(
+        "The Electron process exited",
+        exit_code === nothing ? "" : " with code $(exit_code)",
+        " before it connected back to Julia, so the application could not be started.\n",
+        "Any output from Electron was printed above and usually explains why.\n",
+        "On Linux distributions that do not provide the standard shared libraries in the ",
+        "usual locations (NixOS, for example), the bundled Electron binary cannot find its ",
+        "system dependencies (such as libgobject-2.0.so.0); see the Electron.jl README for ",
+        "how to run it with nix-ld or inside an FHS environment.\n",
+        "main.js used: ", mainjs))
+end
+
+"""
+    _accept_or_fail(server, proc, mainjs, timeout)
+
+Wait for the Electron process to connect to `server`, but do not wait forever: if
+the process exits first, or if it stays silent for `timeout` seconds, throw an
+error that says so instead of blocking in `accept` (see issue #127).
+"""
+function _accept_or_fail(server, proc, mainjs, timeout)
+    # Buffered so that whichever tasks lose the race can still finish without
+    # blocking on a channel nobody reads from any more.
+    outcomes = Channel{Tuple{Symbol,Any}}(4)
+
+    @async begin
+        try
+            put!(outcomes, (:connected, accept(server)))
+        catch err
+            try
+                put!(outcomes, (:accept_failed, err))
+            catch
+            end
+        end
+    end
+
+    @async begin
+        try
+            wait(proc)
+        catch
+        end
+        try
+            put!(outcomes, (:process_exited, nothing))
+        catch
+        end
+    end
+
+    timer = Timer(timeout)
+    @async begin
+        try
+            wait(timer)
+            put!(outcomes, (:timeout, nothing))
+        catch
+        end
+    end
+
+    kind, payload = take!(outcomes)
+    close(timer)
+
+    if kind === :connected
+        return payload
+    elseif kind === :process_exited
+        throw(_electron_startup_error(proc, mainjs))
+    elseif kind === :timeout
+        error("The Electron process did not connect back to Julia within $(timeout) seconds, giving up.")
+    else
+        throw(payload)
+    end
+end
+
 """
     function Application()
 
@@ -138,6 +242,9 @@ can be used in the construction of Electron windows.
 - `sandbox`: Whether to enable Electron's sandbox (default: `false`). Set to `true` for enhanced security when possible.
 - `verbose`: Enable verbose logging output (default: `false`)
 - `additional_electron_args`: Additional command-line arguments to pass to Electron (default: empty)
+- `startup_timeout`: How many seconds to wait for the Electron process to connect back
+  to Julia before giving up (default: `$(DEFAULT_STARTUP_TIMEOUT)`). If the Electron process
+  exits before that, an error is thrown right away.
 
 # Note
 For advanced Electron configuration, pass specific flags via `additional_electron_args`.
@@ -147,7 +254,8 @@ function Application(;
     mainjs=normpath(String(MAIN_JS)),
     additional_electron_args=String[],
     sandbox::Bool=false,
-    verbose::Bool=false
+    verbose::Bool=false,
+    startup_timeout::Real=DEFAULT_STARTUP_TIMEOUT
 )
     @assert isfile(mainjs)
     read(mainjs) # This seems to be required to not hang windows CI?!
@@ -200,23 +308,37 @@ function Application(;
 
     proc = open(Cmd(electron_cmd, env=new_env), "w", stdout)
 
-    sock = accept(server)
-    if read!(sock, zero(secure_cookie)) != secure_cookie
-        close(server)
-        close(sysnotify_server)
-        close(sock)
-        error("Electron failed to authenticate with the proper security token")
-    end
-
-    let sysnotify_sock = accept(sysnotify_server)
-        if read!(sysnotify_sock, zero(secure_cookie)) != secure_cookie
-            close(server)
-            close(sysnotify_server)
-            close(sysnotify_sock)
-            close(sock)
+    sock = nothing
+    sysnotify_sock = nothing
+    try
+        sock = _accept_or_fail(server, proc, mainjs, startup_timeout)
+        if read!(sock, zero(secure_cookie)) != secure_cookie
             error("Electron failed to authenticate with the proper security token")
         end
+
+        sysnotify_sock = _accept_or_fail(sysnotify_server, proc, mainjs, startup_timeout)
+        if read!(sysnotify_sock, zero(secure_cookie)) != secure_cookie
+            error("Electron failed to authenticate with the proper security token")
+        end
+    catch
+        # Never leave a half-started application behind.
+        for x in (server, sysnotify_server, sock, sysnotify_sock)
+            x === nothing && continue
+            try
+                close(x)
+            catch
+            end
+        end
+        try
+            process_running(proc) && kill(proc)
+        catch
+        end
+        rethrow()
+    end
+
+    let sysnotify_sock = sysnotify_sock
         let app = _Application(Window, sock, proc, secure_cookie)
+            _start_connection_task!(app)
             @async begin
                 try
                     try
@@ -255,6 +377,9 @@ function Application(;
                 finally
                     # Cleanup the application instance
                     app.exists = false
+                    # Make sure nobody is left waiting for a reply that can never
+                    # arrive now that the application is gone.
+                    close(app.req_channel)
                     close(sysnotify_sock)
                     app_index = findfirst(a -> a === app, _global_applications)
                     deleteat!(_global_applications, app_index)
@@ -273,27 +398,102 @@ Terminates the Electron application referenced by `app`.
 function Base.close(app::Application)
     app.exists || error("Cannot close this application, the application does no longer exist.")
     while length(windows(app))>0
-        close(first(windows(app)))
+        try
+            close(first(windows(app)))
+        catch err
+            # The application may have gone away while we were closing its windows.
+            err isa ApplicationClosedError || rethrow()
+            break
+        end
     end
     app.exists = false
+    # Shut the request task down first, so that it unwinds cleanly instead of
+    # running into the closed connection, and so that anything still queued gets
+    # failed with a proper error.
+    close(app.req_channel)
     close(app.connection)
+    return nothing
+end
+
+"""
+    _start_connection_task!(app::Application)
+
+Start the one task that owns `app.connection`. It takes requests off
+`app.req_channel`, writes each one to the connection, reads the matching reply
+line and hands it back to the caller through the reply channel that came with the
+request. Because it never has more than one request in flight, the strictly
+ordered request/response protocol cannot be scrambled by concurrent callers.
+
+Every request that is queued or in flight when the connection fails, or when the
+application shuts down, is answered with an `ApplicationClosedError` so that no
+caller is left waiting forever.
+"""
+function _start_connection_task!(app::Application)
+    @async begin
+        failure = nothing
+        try
+            for (json, reply_channel) in app.req_channel
+                try
+                    println(app.connection, json)
+                    flush(app.connection)
+                    reply = readline(app.connection)
+                    # main.js always terminates a reply with a newline, so an empty
+                    # line can only mean that the connection was closed.
+                    if isempty(reply)
+                        failure = ApplicationClosedError()
+                        put!(reply_channel, failure)
+                        break
+                    end
+                    put!(reply_channel, reply)
+                catch err
+                    failure = err isa ApplicationClosedError ? err :
+                        ApplicationClosedError("The Electron application has exited (the connection to it failed: $(sprint(showerror, err))).")
+                    put!(reply_channel, failure)
+                    break
+                end
+            end
+        finally
+            # No further requests can be accepted, and everything that is still
+            # queued has to be failed rather than left hanging.
+            failure === nothing && (failure = ApplicationClosedError())
+            close(app.req_channel)
+            while true
+                request = try
+                    take!(app.req_channel)
+                catch
+                    break
+                end
+                put!(request[2], failure)
+            end
+            # The application must be considered dead now. Closing the connection
+            # makes Electron quit, which in turn triggers the regular cleanup in the
+            # sysnotify task.
+            try
+                close(app.connection)
+            catch
+            end
+        end
+    end
+    return nothing
 end
 
 function req_response(app::Application, cmd)
-    connection = app.connection
     json = JSON.json(cmd)
-    c = Condition()
-    t = @async try
-        println(connection, json)
-        fetch(c)
-    catch ex
-        close(connection) # kill Application, since it probably must be in a bad state now
-        rethrow(ex)
+    reply_channel = Channel{Any}(1)
+    try
+        put!(app.req_channel, (json, reply_channel))
+    catch err
+        err isa InvalidStateException || rethrow()
+        throw(ApplicationClosedError())
     end
-    retval_json = readline(connection)
-    notify(c)
-    fetch(t)
-    return JSON.parse(retval_json)
+    reply = try
+        take!(reply_channel)
+    catch err
+        err isa InvalidStateException || rethrow()
+        throw(ApplicationClosedError())
+    end
+    reply isa Exception && throw(reply)
+    return JSON.parse(reply)
 end
 
 """

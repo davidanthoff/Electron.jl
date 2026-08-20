@@ -26,6 +26,19 @@ You can install the package with:
 Pkg.add("Electron")
 ````
 
+### A note on NixOS
+
+The Electron binary that this package downloads is a normal dynamically linked
+binary and expects to find system libraries (such as `libgobject-2.0.so.0`) in the
+usual places. On NixOS, and on other systems that do not follow the FHS layout,
+those libraries are not where the binary looks for them and Electron dies right at
+startup. `Application()` then fails with an error saying that the Electron process
+exited before it connected back to Julia.
+
+To use Electron.jl there, run Julia in an environment that provides the libraries,
+for example with [`nix-ld`](https://github.com/Mic92/nix-ld) or inside an FHS
+environment created with `pkgs.buildFHSEnv`.
+
 ## Getting started
 
 [Electron.jl](https://github.com/davidanthoff/Electron.jl) introduces two fundamental types: ``Application`` represents a running electron application, ``Window`` is a visible UI window. A julia process can have arbitrarily many applications running at the same time, each represented by its own ``Application`` instance. If you don't want to deal with ``Application``s you can also just ignore them, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) will create a default application for you automatically.
