@@ -201,6 +201,23 @@ end
     end
 end
 
+@testitem "run with JSONText" setup=[ElectronTestHelpers] begin
+    using JSON
+
+    app = Application()
+    try
+        w = Window(app)
+
+        @test run(w, JSON.JSONText("1+1")) == 2
+        @test run(app, JSON.JSONText("1+1")) == 2
+
+        close(w)
+        @test wait_until(() -> isempty(windows(app)))
+    finally
+        app.exists && close(app)
+    end
+end
+
 @testitem "Application fails fast if Electron dies at startup" setup=[ElectronTestHelpers] begin
     dir = mktempdir()
     try
@@ -344,6 +361,24 @@ end
         if istaskdone(t)
             @test fetch(t) == "LOADED"
         end
+
+        close(w)
+        @test wait_until(() -> isempty(windows(app)))
+    finally
+        app.exists && close(app)
+    end
+end
+
+@testitem "sendMessageToJulia with undefined" setup=[ElectronTestHelpers] begin
+    app = Application()
+    try
+        w = Window(app)
+
+        run(w, "sendMessageToJulia(undefined)")
+        @test take!(msgchannel(w)) === nothing
+
+        # The application must have survived the undefined payload (issue #144)
+        @test run(w, "1+1") == 2
 
         close(w)
         @test wait_until(() -> isempty(windows(app)))

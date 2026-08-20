@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
+using JSON, URIs, Sockets, Base64, Artifacts, FilePaths, UUIDs
 using RelocatableFolders
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI,
@@ -389,14 +389,18 @@ function Application(;
                                     break
                                 elseif cmd_parsed["cmd"] == "msg_from_window"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
+                                    # `get` rather than indexing: a `main.js` that predates
+                                    # the `undefined` fix leaves the key out entirely, and
+                                    # that must not take the whole application down.
+                                    payload = get(cmd_parsed, "payload", nothing)
                                     if win_index === nothing
                                         # The page sent this before we learned about
                                         # the window; hold on to it until the
                                         # `Window` object is constructed.
                                         msgs = get!(() -> Any[], app.pending_msgs, cmd_parsed["winid"])
-                                        push!(msgs, cmd_parsed["payload"])
+                                        push!(msgs, payload)
                                     else
-                                        put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
+                                        put!(app.windows[win_index].msg_channel, payload)
                                     end
                                 end
                             catch er
@@ -575,6 +579,24 @@ function Base.run(win::Window, code::AbstractString)
         error("Internal error.")
     end
 end
+
+"""
+    run(app::Application, code::JSON.JSONText)
+
+Run the JavaScript code that is wrapped in `code` in the main
+application thread of the `app` Electron process. Returns the
+value that the JavaScript expression returns.
+"""
+Base.run(app::Application, code::JSON.JSONText) = run(app, JSON.json(code))
+
+"""
+    run(win::Window, code::JSON.JSONText)
+
+Run the JavaScript code that is wrapped in `code` in the render
+thread of the `win` Electron window. Returns the value that
+the JavaScript expression returns.
+"""
+Base.run(win::Window, code::JSON.JSONText) = run(win, JSON.json(code))
 
 """
     load(win::Window, uri::URI)
