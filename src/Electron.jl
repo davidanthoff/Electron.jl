@@ -58,9 +58,14 @@ mutable struct _Application{T} # forward declaration of Application
     # a strictly ordered sequence of request/response pairs, so this serialization is
     # what makes Electron.jl safe to use from several tasks at once.
     req_channel::Channel{_Request}
+    # Messages that a page sent before the corresponding `Window` object existed
+    # on the julia side. A preload script makes `sendMessageToJulia` available to
+    # page scripts right away, so a page can send a message from e.g. an
+    # `window.onload` handler before we have even learned the window's id.
+    pending_msgs::Dict{Int64,Vector{Any}}
 
     global function _Application(::Type{T}, connection::IO, proc, secure_cookie) where {T} # internal constructor
-        new_app = new{T}(connection, proc, secure_cookie, T[], true, Channel{_Request}(Inf))
+        new_app = new{T}(connection, proc, secure_cookie, T[], true, Channel{_Request}(Inf), Dict{Int64,Vector{Any}}())
         push!(_global_applications, new_app)
         return new_app
     end
@@ -78,6 +83,12 @@ mutable struct Window
     global function _Window(app::_Application{Window}, id::Int64; msg_channel_size=128) # internal constructor
         new_window = new(app, id, true, Channel{Any}(msg_channel_size), String[])
         push!(app.windows, new_window)
+        # Deliver anything the page already sent before this object existed. This
+        # must not yield, so that no message can slip in between the `push!`
+        # above and the draining below.
+        for msg in pop!(app.pending_msgs, id, Any[])
+            put!(new_window.msg_channel, msg)
+        end
         return new_window
     end
 end
@@ -150,7 +161,10 @@ function get_electron_binary_cmd()
     end
 end
 
-const MAIN_JS = @path joinpath(@__DIR__, "main.js")
+# We relocate the whole `js` directory rather than just `main.js`, so that
+# `main.js` can reliably find `preload.js` next to it via `__dirname`.
+const JS_DIR = @path joinpath(@__DIR__, "js")
+const MAIN_JS = joinpath(String(JS_DIR), "main.js")
 
 # How long we are willing to wait for the Electron process to connect back to us
 # before we give up. This is only a backstop against a process that is alive but
@@ -363,16 +377,27 @@ function Application(;
                                 isempty(line_json) && break # EOF
                                 cmd_parsed = JSON.parse(line_json)
                                 if cmd_parsed["cmd"] == "windowclosed"
+                                    delete!(app.pending_msgs, cmd_parsed["winid"])
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
-                                    app.windows[win_index].exists = false
-                                    close(app.windows[win_index].msg_channel)
-                                    _cleanup_tmp_html_files(app.windows[win_index])
-                                    deleteat!(app.windows, win_index)
+                                    if win_index !== nothing
+                                        app.windows[win_index].exists = false
+                                        close(app.windows[win_index].msg_channel)
+                                        _cleanup_tmp_html_files(app.windows[win_index])
+                                        deleteat!(app.windows, win_index)
+                                    end
                                 elseif cmd_parsed["cmd"] == "appclosing"
                                     break
                                 elseif cmd_parsed["cmd"] == "msg_from_window"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
-                                    put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
+                                    if win_index === nothing
+                                        # The page sent this before we learned about
+                                        # the window; hold on to it until the
+                                        # `Window` object is constructed.
+                                        msgs = get!(() -> Any[], app.pending_msgs, cmd_parsed["winid"])
+                                        push!(msgs, cmd_parsed["payload"])
+                                    else
+                                        put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
+                                    end
                                 end
                             catch er
                                 bt = catch_backtrace()
