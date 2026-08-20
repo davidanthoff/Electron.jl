@@ -120,6 +120,72 @@ msg = take!(ch)
 println(msg)
 ````
 
+## Recipes
+
+### Native dialogs
+
+Electron's [`dialog`](https://www.electronjs.org/docs/latest/api/dialog) API lives in the
+main process, so you reach it by running JavaScript against an ``Application`` rather than
+against a ``Window``. Inside that code the ``electron`` module is already in scope. Note that
+a dialog does not need a window of its own:
+
+````julia
+using Electron
+
+app = Application()
+
+folders = run(app, """
+    electron.dialog.showOpenDialogSync({properties: ['openDirectory']})
+""")
+````
+
+``showOpenDialogSync`` returns the selected paths, or ``nothing`` if the user cancelled.
+
+### Reacting to window events
+
+``ElectronAPI`` forwards its arguments as JSON, so a ``JSON.JSONText`` argument is passed
+through verbatim rather than as a string — which is how you hand a JavaScript callback to
+an Electron event:
+
+````julia
+using Electron, JSON
+
+win = Window()
+
+ElectronAPI.on(win, "resize", JSON.JSONText("""
+    function() {
+        const w = electron.BrowserWindow.fromId($(win.id))
+        w.webContents.executeJavaScript("sendMessageToJulia(" + JSON.stringify(w.getSize()) + ")")
+    }
+"""))
+
+ch = msgchannel(win)
+
+take!(ch)  # [width, height], every time the window is resized
+````
+
+The handler runs in Electron's main process, where it has the full Electron API but no
+``sendMessageToJulia`` — that function only exists in a window's render thread. Hence the
+detour through ``webContents.executeJavaScript``. The handler's own return value goes
+nowhere, so this round trip is how you get a value back to Julia.
+
+### Opening a plain window
+
+Older examples on the web create windows from inside a page with
+``require('electron').remote``. That module was removed in Electron 14 and is not
+available here. Create the window from Julia instead, and configure it through
+``ElectronAPI``:
+
+````julia
+using Electron
+
+app = Application()
+
+win = Window(app, Dict("width" => 640, "height" => 360))
+
+ElectronAPI.setMenuBarVisibility(win, true)
+````
+
 ## Examples
 
 The following packages currently use Electron.jl:
