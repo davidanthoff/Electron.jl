@@ -8,6 +8,8 @@
   read the cookie from `process.env.JULIA_ELECTRON_SECURE_COOKIE` (and should
   `delete process.env.JULIA_ELECTRON_SECURE_COOKIE` right afterwards) instead of taking it
   from `process.argv`.
+* `isopen(app::Application)` reports whether an application is still running, the way
+  `isopen(win::Window)` already did for windows.
 * Large HTML content passed to `load(win, html)` and `Window(app, content)` is now written
   to a temporary file and loaded via a `file://` URL instead of a `data:` URL, which fixes
   hangs and blank windows for payloads above a few hundred kilobytes. The temporary files
