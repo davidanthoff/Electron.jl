@@ -109,6 +109,31 @@ end
     end
 end
 
+@testitem "sendMessageToJulia available to page scripts" setup=[ElectronTestHelpers] begin
+    using FilePaths
+
+    # Issues #143 and #34: `sendMessageToJulia` has to be defined before any
+    # script of the page runs, so that inline `<head>` scripts, `window.onload`
+    # handlers and promise callbacks can call it.
+    app = Application()
+    try
+        w = Window(app, joinpath(@__PATH__, p"onload_test.html"))
+
+        c = msgchannel(w)
+        t = @async take!(c)
+        # Don't block the test suite forever if the message never arrives.
+        @test wait_until(() -> istaskdone(t), 30.0)
+        if istaskdone(t)
+            @test fetch(t) == "LOADED"
+        end
+
+        close(w)
+        @test wait_until(() -> isempty(windows(app)))
+    finally
+        app.exists && close(app)
+    end
+end
+
 @testitem "toggle_devtools" begin
     using FilePaths
 

@@ -11,6 +11,11 @@ const ipcMain = electron.ipcMain;
 
 function createWindow(connection, opts) {
     opts.webPreferences = { nodeIntegration: true, contextIsolation: false, ...opts.webPreferences }
+    // Install our preload script, which defines `sendMessageToJulia` before any
+    // page script runs. Don't clobber a preload script the user supplied.
+    if (!opts.webPreferences.preload) {
+        opts.webPreferences.preload = path.join(__dirname, 'preload.js')
+    }
     var win = new electron.BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -22,14 +27,19 @@ function createWindow(connection, opts) {
     // has been closed.
     var win_id = win.id
 
+    // Legacy fallback: `sendMessageToJulia` used to be injected here, after the
+    // page had finished loading. The preload script above now defines it much
+    // earlier, so this only kicks in if the preload script did not run. It is
+    // kept for one release and must never overwrite the preload version.
     win.webContents.on("did-finish-load", function() {
         win.webContents.executeJavaScript(
-            `if (typeof require !== 'undefined') {
+            `if (typeof window.sendMessageToJulia !== 'undefined') {
+                // Already provided by the preload script, nothing to do.
+            } else if (typeof require !== 'undefined') {
                 const {ipcRenderer} = require('electron');
-                function sendMessageToJulia(message) {
+                window.sendMessageToJulia = function (message) {
                     ipcRenderer.send('msg-for-julia-process', message)
                 };
-                global['sendMessageToJulia'] = sendMessageToJulia
             } else {
                 console.info("Electron.jl: ipcRenderer is not available to send messages to the julia backend.");
             };
