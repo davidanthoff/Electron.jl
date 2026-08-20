@@ -1,3 +1,18 @@
+# Electron.jl unreleased
+
+* **Breaking**: the secure cookie is no longer passed to the Electron process as a
+  positional command line argument, it is now passed in the environment variable
+  `JULIA_ELECTRON_SECURE_COOKIE` instead (command lines are visible to other users in the
+  process table). The Electron process now receives only `main.js`, the main pipe name and
+  the sysnotify pipe name as positional arguments. Anyone shipping a custom `mainjs` has to
+  read the cookie from `process.env.JULIA_ELECTRON_SECURE_COOKIE` (and should
+  `delete process.env.JULIA_ELECTRON_SECURE_COOKIE` right afterwards) instead of taking it
+  from `process.argv`.
+* Large HTML content passed to `load(win, html)` and `Window(app, content)` is now written
+  to a temporary file and loaded via a `file://` URL instead of a `data:` URL, which fixes
+  hangs and blank windows for payloads above a few hundred kilobytes. The temporary files
+  are deleted when the window is closed or the application exits.
+
 # Electron.jl v2.0.1 Release Notes
 * Tag the right version
 
