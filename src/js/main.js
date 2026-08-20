@@ -11,6 +11,11 @@ const ipcMain = electron.ipcMain;
 
 function createWindow(connection, opts) {
     opts.webPreferences = { nodeIntegration: true, contextIsolation: false, ...opts.webPreferences }
+    // Install our preload script, which defines `sendMessageToJulia` before any
+    // page script runs. Don't clobber a preload script the user supplied.
+    if (!opts.webPreferences.preload) {
+        opts.webPreferences.preload = path.join(__dirname, 'preload.js')
+    }
     var win = new electron.BrowserWindow(opts)
     win.loadURL(opts.url ? opts.url : "about:blank")
     win.setMenu(null)
@@ -22,14 +27,19 @@ function createWindow(connection, opts) {
     // has been closed.
     var win_id = win.id
 
+    // Legacy fallback: `sendMessageToJulia` used to be injected here, after the
+    // page had finished loading. The preload script above now defines it much
+    // earlier, so this only kicks in if the preload script did not run. It is
+    // kept for one release and must never overwrite the preload version.
     win.webContents.on("did-finish-load", function() {
         win.webContents.executeJavaScript(
-            `if (typeof require !== 'undefined') {
+            `if (typeof window.sendMessageToJulia !== 'undefined') {
+                // Already provided by the preload script, nothing to do.
+            } else if (typeof require !== 'undefined') {
                 const {ipcRenderer} = require('electron');
-                function sendMessageToJulia(message) {
+                window.sendMessageToJulia = function (message) {
                     ipcRenderer.send('msg-for-julia-process', message)
                 };
-                global['sendMessageToJulia'] = sendMessageToJulia
             } else {
                 console.info("Electron.jl: ipcRenderer is not available to send messages to the julia backend.");
             };
@@ -96,9 +106,11 @@ function secure_connect(addr, secure_cookie) {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 electron.app.on('ready', function () {
-    // Arguments structure: electron.exe [flags...] main.js main_pipe_name sysnotify_pipe_name secure_cookie_encoded [additional_args...]
-    // We know the required args are always: main.js, main_pipe_name, sysnotify_pipe_name, secure_cookie_encoded
-    // So we find main.js and take the next 3 arguments
+    // Arguments structure: electron.exe [flags...] main.js main_pipe_name sysnotify_pipe_name [additional_args...]
+    // We know the required args are always: main.js, main_pipe_name, sysnotify_pipe_name
+    // So we find main.js and take the next 2 arguments.
+    // The secure cookie is NOT passed on the command line (it would be visible in the
+    // process table); it arrives in the environment instead, see below.
 
     var mainjs_index = -1;
     for (var i = 1; i < process.argv.length; i++) {
@@ -118,7 +130,7 @@ electron.app.on('ready', function () {
         }
     }
 
-    if (mainjs_index === -1 || mainjs_index + 3 >= process.argv.length) {
+    if (mainjs_index === -1 || mainjs_index + 2 >= process.argv.length) {
         console.error('Could not find required arguments');
         console.error('Arguments:', process.argv);
         process.exit(1);
@@ -126,7 +138,18 @@ electron.app.on('ready', function () {
 
     var main_pipe_name = process.argv[mainjs_index + 1];
     var sysnotify_pipe_name = process.argv[mainjs_index + 2];
-    var secure_cookie_encoded = process.argv[mainjs_index + 3];
+
+    // Must be kept in sync with `SECURE_COOKIE_ENV_VAR` in Electron.jl. The variable is
+    // removed from the environment immediately so that it does not leak into any child
+    // process that Electron itself spawns (renderers, GPU process, ...).
+    var SECURE_COOKIE_ENV_VAR = 'JULIA_ELECTRON_SECURE_COOKIE';
+    var secure_cookie_encoded = process.env[SECURE_COOKIE_ENV_VAR];
+    delete process.env[SECURE_COOKIE_ENV_VAR];
+
+    if (!secure_cookie_encoded) {
+        console.error('The ' + SECURE_COOKIE_ENV_VAR + ' environment variable is not set.');
+        process.exit(1);
+    }
 
     var secure_cookie = Buffer.from(secure_cookie_encoded, 'base64');
 
@@ -140,7 +163,7 @@ electron.app.on('ready', function () {
 
     electron.ipcMain.on('msg-for-julia-process', (event, arg) => {
         var win_id = electron.BrowserWindow.fromWebContents(event.sender).id;
-        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
+        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg === undefined ? null : arg }) + '\n')
     })
 
     const rloptions = { input: connection, terminal: false, historySize: 0, crlfDelay: Infinity }

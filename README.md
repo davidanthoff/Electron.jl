@@ -26,6 +26,19 @@ You can install the package with:
 Pkg.add("Electron")
 ````
 
+### A note on NixOS
+
+The Electron binary that this package downloads is a normal dynamically linked
+binary and expects to find system libraries (such as `libgobject-2.0.so.0`) in the
+usual places. On NixOS, and on other systems that do not follow the FHS layout,
+those libraries are not where the binary looks for them and Electron dies right at
+startup. `Application()` then fails with an error saying that the Electron process
+exited before it connected back to Julia.
+
+To use Electron.jl there, run Julia in an environment that provides the libraries,
+for example with [`nix-ld`](https://github.com/Mic92/nix-ld) or inside an FHS
+environment created with `pkgs.buildFHSEnv`.
+
 ## Getting started
 
 [Electron.jl](https://github.com/davidanthoff/Electron.jl) introduces two fundamental types: ``Application`` represents a running electron application, ``Window`` is a visible UI window. A julia process can have arbitrarily many applications running at the same time, each represented by its own ``Application`` instance. If you don't want to deal with ``Application``s you can also just ignore them, in that case [Electron.jl](https://github.com/davidanthoff/Electron.jl) will create a default application for you automatically.
@@ -105,6 +118,72 @@ ch = msgchannel(win)
 msg = take!(ch)
 
 println(msg)
+````
+
+## Recipes
+
+### Native dialogs
+
+Electron's [`dialog`](https://www.electronjs.org/docs/latest/api/dialog) API lives in the
+main process, so you reach it by running JavaScript against an ``Application`` rather than
+against a ``Window``. Inside that code the ``electron`` module is already in scope. Note that
+a dialog does not need a window of its own:
+
+````julia
+using Electron
+
+app = Application()
+
+folders = run(app, """
+    electron.dialog.showOpenDialogSync({properties: ['openDirectory']})
+""")
+````
+
+``showOpenDialogSync`` returns the selected paths, or ``nothing`` if the user cancelled.
+
+### Reacting to window events
+
+``ElectronAPI`` forwards its arguments as JSON, so a ``JSON.JSONText`` argument is passed
+through verbatim rather than as a string — which is how you hand a JavaScript callback to
+an Electron event:
+
+````julia
+using Electron, JSON
+
+win = Window()
+
+ElectronAPI.on(win, "resize", JSON.JSONText("""
+    function() {
+        const w = electron.BrowserWindow.fromId($(win.id))
+        w.webContents.executeJavaScript("sendMessageToJulia(" + JSON.stringify(w.getSize()) + ")")
+    }
+"""))
+
+ch = msgchannel(win)
+
+take!(ch)  # [width, height], every time the window is resized
+````
+
+The handler runs in Electron's main process, where it has the full Electron API but no
+``sendMessageToJulia`` — that function only exists in a window's render thread. Hence the
+detour through ``webContents.executeJavaScript``. The handler's own return value goes
+nowhere, so this round trip is how you get a value back to Julia.
+
+### Opening a plain window
+
+Older examples on the web create windows from inside a page with
+``require('electron').remote``. That module was removed in Electron 14 and is not
+available here. Create the window from Julia instead, and configure it through
+``ElectronAPI``:
+
+````julia
+using Electron
+
+app = Application()
+
+win = Window(app, Dict("width" => 640, "height" => 360))
+
+ElectronAPI.setMenuBarVisibility(win, true)
 ````
 
 ## Examples
