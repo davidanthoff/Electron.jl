@@ -252,6 +252,27 @@ end
     end
 end
 
+@testitem "isopen" setup=[ElectronTestHelpers] begin
+    app = Application()
+    try
+        w = Window(app)
+
+        @test isopen(app)
+        @test isopen(w)
+
+        close(w)
+        @test wait_until(() -> !isopen(w))
+        @test isopen(app)
+
+        close(app)
+        # The application is marked dead as part of tearing the connection down,
+        # which happens asynchronously.
+        @test wait_until(() -> !isopen(app))
+    finally
+        app.exists && close(app)
+    end
+end
+
 @testitem "Requests fail with a clear error once the application is gone" setup=[ElectronTestHelpers] begin
     app = Application()
     try

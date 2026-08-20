@@ -793,7 +793,21 @@ function Base.close(win::Window)
     return nothing
 end
 
+"""
+    isopen(win::Window)
+
+Return whether the window referenced by `win` still exists.
+"""
 Base.isopen(win::Window) = win.exists
+
+"""
+    isopen(app::Application)
+
+Return whether the Electron application referenced by `app` is still running. An
+application that was closed, or whose Electron process exited on its own, is no
+longer usable: any request against it throws an [`ApplicationClosedError`](@ref).
+"""
+Base.isopen(app::Application) = app.exists
 
 msgchannel(win::Window) = win.msg_channel
 
