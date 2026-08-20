@@ -140,7 +140,7 @@ electron.app.on('ready', function () {
 
     electron.ipcMain.on('msg-for-julia-process', (event, arg) => {
         var win_id = electron.BrowserWindow.fromWebContents(event.sender).id;
-        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg }) + '\n')
+        sysnotify_connection.write(JSON.stringify({ cmd: "msg_from_window", winid: win_id, payload: arg === undefined ? null : arg }) + '\n')
     })
 
     const rloptions = { input: connection, terminal: false, historySize: 0, crlfDelay: Infinity }

@@ -1,6 +1,6 @@
 module Electron
 
-using JSON, URIs, Sockets, Base64, Pkg.Artifacts, FilePaths, UUIDs
+using JSON, URIs, Sockets, Base64, Artifacts, FilePaths, UUIDs
 using RelocatableFolders
 
 export Application, Window, URI, windows, applications, msgchannel, toggle_devtools, load, ElectronAPI
@@ -234,7 +234,7 @@ function Application(;
                                     break
                                 elseif cmd_parsed["cmd"] == "msg_from_window"
                                     win_index = findfirst(w -> w.id == cmd_parsed["winid"], app.windows)
-                                    put!(app.windows[win_index].msg_channel, cmd_parsed["payload"])
+                                    put!(app.windows[win_index].msg_channel, get(cmd_parsed, "payload", nothing))
                                 end
                             catch er
                                 bt = catch_backtrace()
@@ -333,6 +333,24 @@ function Base.run(win::Window, code::AbstractString)
         error("Internal error.")
     end
 end
+
+"""
+    run(app::Application, code::JSON.JSONText)
+
+Run the JavaScript code that is wrapped in `code` in the main
+application thread of the `app` Electron process. Returns the
+value that the JavaScript expression returns.
+"""
+Base.run(app::Application, code::JSON.JSONText) = run(app, JSON.json(code))
+
+"""
+    run(win::Window, code::JSON.JSONText)
+
+Run the JavaScript code that is wrapped in `code` in the render
+thread of the `win` Electron window. Returns the value that
+the JavaScript expression returns.
+"""
+Base.run(win::Window, code::JSON.JSONText) = run(win, JSON.json(code))
 
 """
     load(win::Window, uri::URI)
