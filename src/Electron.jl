@@ -217,7 +217,7 @@ function Application(;
             error("Electron failed to authenticate with the proper security token")
         end
         let app = _Application(Window, sock, proc, secure_cookie)
-            @async begin
+            Threads.@spawn begin
                 try
                     try
                         while true
@@ -282,17 +282,13 @@ end
 function req_response(app::Application, cmd)
     connection = app.connection
     json = JSON.json(cmd)
-    c = Condition()
-    t = @async try
+    try
         println(connection, json)
-        fetch(c)
     catch ex
         close(connection) # kill Application, since it probably must be in a bad state now
         rethrow(ex)
     end
     retval_json = readline(connection)
-    notify(c)
-    fetch(t)
     return JSON.parse(retval_json)
 end
 
