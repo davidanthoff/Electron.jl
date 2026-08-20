@@ -8,7 +8,7 @@ export Application, Window, URI, windows, applications, msgchannel, toggle_devto
 function conditional_electron_load()
     try
         return artifact"electronjs_app"
-    catch error
+    catch
         return nothing
     end
 end
@@ -239,7 +239,7 @@ function Application(;
                             catch er
                                 bt = catch_backtrace()
                                 io = PipeBuffer()
-                                print_with_color(Base.error_color(), io, "Electron ERROR: "; bold = true)
+                                printstyled(io, "Electron ERROR: "; color = Base.error_color(), bold = true)
                                 Base.showerror(IOContext(io, :limit => true), er, bt)
                                 println(io)
                                 write(stderr, io)
@@ -439,7 +439,7 @@ Close the windows referenced by `win`.
 function Base.close(win::Window)
     win.exists || error("Cannot close this window, the window does no longer exist.")
     message = OptDict("cmd" => "closewindow", "winid" => win.id)
-    retval = req_response(win.app, message)
+    req_response(win.app, message)
     return nothing
 end
 
@@ -479,7 +479,10 @@ Base.getproperty(::ElectronAPIType, name::Symbol) = ElectronAPIFunction(name)
 
 function (api::ElectronAPIFunction)(w::Window, args...)
     name = api.name
-    json_args = JSON.json(collect(args))
+    # `Any[]` rather than `collect(args)`: for a zero-argument call the latter is a
+    # `Vector{Union{}}`, which JSON.jl v1 serializes as `{}` instead of `[]`, and the
+    # spread below then fails with a JS TypeError.
+    json_args = JSON.json(Any[args...])
     run(w.app, "electron.BrowserWindow.fromId($(w.id)).$name(...$json_args)")
 end
 
